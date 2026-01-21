@@ -420,6 +420,14 @@
         <h1>🎄 Christmas Light Estimation Tool 🎄</h1>
         <p class="subtitle">Professional Roof Measuring & Quote Generator</p>
 
+        <!-- Load Project Button at Top -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn-primary" onclick="loadProject()" style="background: #17a2b8; font-size: 1.1em; padding: 15px 30px;">
+                📂 Load Saved Project
+            </button>
+            <p style="color: #666; margin-top: 8px; font-size: 0.9em;">Load a previous project to view or edit measurements</p>
+        </div>
+
         <!-- Customer Information -->
         <div class="customer-info">
             <div class="input-group">
@@ -447,7 +455,7 @@
 
                 <!-- Canvas Section -->
                 <div class="section" id="canvasSection" style="display: none;">
-                    <h2>📏 Step 2: Calibrate & Measure</h2>
+                    <h2>📏 Calibrate & Measure</h2>
                     
                     <div id="calibrationStatus" class="status info">
                         Click two points on a known distance (door, window, etc.)
@@ -497,10 +505,10 @@
 
                     <div class="controls">
                         <button class="btn-primary" onclick="startNewSection()">Start New Section</button>
-                        <button class="btn-warning" onclick="undoPoint()">Undo Point</button>
+                        <button class="btn-warning" onclick="undoPoint()">↶ Undo Point</button>
+                        <button class="btn-warning" onclick="redoPoint()">↷ Redo Point</button>
                         <button class="btn-secondary" onclick="clearAll()">Clear All</button>
                         <button class="btn-primary" onclick="saveProject()" style="background: #17a2b8;">💾 Save Project</button>
-                        <button class="btn-primary" onclick="loadProject()" style="background: #6c757d;">📂 Load Project</button>
                     </div>
 
                     <div class="measurements-list" id="measurementsList"></div>
@@ -516,7 +524,7 @@
 
                 <!-- Wreaths Section -->
                 <div class="section">
-                    <h2>🎁 Wreaths</h2>
+                    <h2>🌿 Wreaths</h2>
                     <div id="wreathsList"></div>
                     <button class="btn-primary" onclick="addWreath()">+ Add Wreath</button>
                 </div>
@@ -529,14 +537,14 @@
                         <input type="number" id="columnCount" value="0" min="0" onchange="updateEstimate()">
                         <span>@ $</span>
                         <input type="number" id="columnPrice" value="40" step="1" min="0" onchange="updateEstimate()">
-                        <span>each</span>
+                        <span>per strand</span>
                     </div>
                     <div class="pricing-input">
                         <label>Shrub Wraps:</label>
                         <input type="number" id="shrubCount" value="0" min="0" onchange="updateEstimate()">
                         <span>@ $</span>
                         <input type="number" id="shrubPrice" value="30" step="1" min="0" onchange="updateEstimate()">
-                        <span>each</span>
+                        <span>per strand</span>
                     </div>
                 </div>
             </div>
@@ -600,10 +608,15 @@
         // Global variables
         let canvas, ctx;
         let image = null;
+        let originalImageData = null; // Store original image without drawings
         let zoomLevel = 1;
         let calibrationPoints = [];
         let calibrationFactor = null;
         let isCalibrated = false;
+        
+        // History for undo/redo
+        let history = [];
+        let historyIndex = -1;
         
         let sections = [
             { color: '#ff0000', name: 'Section 1', points: [], lengths: [] },
@@ -627,12 +640,13 @@
 
             const reader = new FileReader();
             reader.onload = function(event) {
+                originalImageData = event.target.result; // Store original image data
                 image = new Image();
                 image.onload = function() {
                     setupCanvas();
                     document.getElementById('canvasSection').style.display = 'block';
                 };
-                image.src = event.target.result;
+                image.src = originalImageData;
             };
             reader.readAsDataURL(file);
         }
@@ -646,11 +660,120 @@
             
             drawCanvas();
             
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
             canvas.addEventListener('click', handleCanvasClick);
         }
 
+        let draggingPoint = null;
+        let dragStartPos = null;
+
+        function handleMouseDown(e) {
+            if (!isCalibrated) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Check if clicking on a point to drag
+            for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+                const section = sections[sectionIdx];
+                for (let pointIdx = 0; pointIdx < section.points.length; pointIdx++) {
+                    const point = section.points[pointIdx];
+                    const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                    
+                    if (distance <= 12) { // Within 12 pixels of point
+                        draggingPoint = { sectionIdx, pointIdx };
+                        dragStartPos = { x, y };
+                        canvas.style.cursor = 'move';
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!draggingPoint) {
+                // Update cursor when hovering over points
+                if (isCalibrated) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+                    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+                    
+                    let overPoint = false;
+                    for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+                        const section = sections[sectionIdx];
+                        for (let pointIdx = 0; pointIdx < section.points.length; pointIdx++) {
+                            const point = section.points[pointIdx];
+                            const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                            
+                            if (distance <= 12) {
+                                overPoint = true;
+                                break;
+                            }
+                        }
+                        if (overPoint) break;
+                    }
+                    canvas.style.cursor = overPoint ? 'move' : 'crosshair';
+                }
+                return;
+            }
+            
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Update point position
+            const section = sections[draggingPoint.sectionIdx];
+            section.points[draggingPoint.pointIdx] = { x, y };
+            
+            // Recalculate lengths for affected segments
+            const pointIdx = draggingPoint.pointIdx;
+            
+            // Recalculate segment before this point
+            if (pointIdx > 0) {
+                const p1 = section.points[pointIdx - 1];
+                const p2 = section.points[pointIdx];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                section.lengths[pointIdx - 1] = pixelDistance * calibrationFactor;
+            }
+            
+            // Recalculate segment after this point
+            if (pointIdx < section.points.length - 1) {
+                const p1 = section.points[pointIdx];
+                const p2 = section.points[pointIdx + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                section.lengths[pointIdx] = pixelDistance * calibrationFactor;
+            }
+            
+            drawCanvas();
+        }
+
+        function handleMouseUp(e) {
+            if (draggingPoint) {
+                e.preventDefault();
+                saveState(); // Save state after dragging
+                draggingPoint = null;
+                dragStartPos = null;
+                canvas.style.cursor = 'crosshair';
+                updateMeasurementsList();
+                updateEstimate();
+            }
+        }
+
         function drawCanvas() {
+            // Always start with a completely clean canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Redraw the base image
             ctx.drawImage(image, 0, 0);
 
             // Draw calibration line
@@ -671,7 +794,7 @@
                 });
             }
 
-            // Draw all sections
+            // Draw all sections - only draw what exists in the points array
             sections.forEach((section, sectionIdx) => {
                 if (section.points.length === 0) return;
 
@@ -679,33 +802,41 @@
                 ctx.lineWidth = 3;
                 ctx.fillStyle = section.color;
 
-                // Draw lines
+                // Draw lines - only between points that actually exist
                 for (let i = 0; i < section.points.length - 1; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(section.points[i].x, section.points[i].y);
-                    ctx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
-                    ctx.stroke();
+                    if (section.points[i] && section.points[i + 1]) {
+                        ctx.beginPath();
+                        ctx.moveTo(section.points[i].x, section.points[i].y);
+                        ctx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
+                        ctx.stroke();
+                    }
                 }
 
                 // Draw points with numbers
                 section.points.forEach((point, idx) => {
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 12px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText((idx + 1).toString(), point.x, point.y + 4);
+                    if (point) {
+                        ctx.fillStyle = section.color;
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText((idx + 1).toString(), point.x, point.y + 4);
+                    }
                 });
             });
 
-            // Draw length labels on top of everything
+            // Draw length labels with X delete buttons on top of everything
             sections.forEach((section, sectionIdx) => {
                 if (section.points.length === 0) return;
+                
+                // Clear delete areas for this section
+                section.deleteAreas = [];
 
                 for (let i = 0; i < section.points.length - 1; i++) {
-                    if (section.lengths[i]) {
+                    if (section.lengths[i] && section.points[i] && section.points[i + 1]) {
                         const midX = (section.points[i].x + section.points[i + 1].x) / 2;
                         const midY = (section.points[i].y + section.points[i + 1].y) / 2;
                         
@@ -715,7 +846,8 @@
                         
                         // Draw white background with rounded corners
                         const padding = 4;
-                        const boxWidth = textWidth + padding * 2;
+                        const xButtonSize = 16;
+                        const boxWidth = textWidth + padding * 2 + xButtonSize + 4;
                         const boxHeight = 16;
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -727,16 +859,94 @@
                         ctx.fillStyle = '#333';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText(labelText, midX, midY);
+                        ctx.fillText(labelText, midX - xButtonSize/2 - 2, midY);
+                        
+                        // Draw X button
+                        const xButtonX = midX + boxWidth/2 - xButtonSize/2 - 2;
+                        const xButtonY = midY - xButtonSize/2;
+                        
+                        // Red circle background
+                        ctx.fillStyle = '#dc3545';
+                        ctx.beginPath();
+                        ctx.arc(xButtonX + xButtonSize/2, xButtonY + xButtonSize/2, 7, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // White X
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(xButtonX + 4, xButtonY + 4);
+                        ctx.lineTo(xButtonX + xButtonSize - 4, xButtonY + xButtonSize - 4);
+                        ctx.moveTo(xButtonX + xButtonSize - 4, xButtonY + 4);
+                        ctx.lineTo(xButtonX + 4, xButtonY + xButtonSize - 4);
+                        ctx.stroke();
+                        
+                        // Store the clickable area for this segment
+                        section.deleteAreas[i] = {
+                            x: xButtonX,
+                            y: xButtonY,
+                            width: xButtonSize,
+                            height: xButtonSize,
+                            pointIndex: i
+                        };
                     }
                 }
             });
         }
 
         function handleCanvasClick(e) {
+            // Don't process click if we just finished dragging
+            if (dragStartPos) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+                
+                // If mouse moved more than 5 pixels, it was a drag not a click
+                const distance = Math.sqrt((x - dragStartPos.x) ** 2 + (y - dragStartPos.y) ** 2);
+                if (distance > 5) {
+                    dragStartPos = null;
+                    return;
+                }
+                dragStartPos = null;
+            }
+            
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            // Check if clicking on an X button to delete a segment
+            if (isCalibrated) {
+                for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+                    const section = sections[sectionIdx];
+                    if (!section.deleteAreas) continue;
+                    
+                    for (let i = 0; i < section.deleteAreas.length; i++) {
+                        const area = section.deleteAreas[i];
+                        if (!area) continue;
+                        
+                        if (x >= area.x && x <= area.x + area.width &&
+                            y >= area.y && y <= area.y + area.height) {
+                            // Delete this segment
+                            deleteSegment(sectionIdx, area.pointIndex);
+                            return;
+                        }
+                    }
+                }
+                
+                // Check if clicking near an existing point (to avoid accidental new points)
+                for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+                    const section = sections[sectionIdx];
+                    for (let pointIdx = 0; pointIdx < section.points.length; pointIdx++) {
+                        const point = section.points[pointIdx];
+                        const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                        
+                        if (distance <= 12) {
+                            // Clicking on existing point, don't add new one
+                            return;
+                        }
+                    }
+                }
+            }
 
             if (!isCalibrated) {
                 // Calibration mode
@@ -775,10 +985,51 @@
                     currentSection.lengths.push(feetDistance);
                 }
                 
+                saveState(); // Save state for undo/redo
                 drawCanvas();
                 updateMeasurementsList();
                 updateEstimate();
             }
+        }
+
+        function deleteSegment(sectionIdx, pointIndex) {
+            if (!confirm('Delete this segment? This will remove the point and line.')) return;
+            
+            saveState(); // Save state before deleting
+            
+            const section = sections[sectionIdx];
+            
+            // Remove the second point of the segment
+            section.points.splice(pointIndex + 1, 1);
+            
+            // Completely rebuild lengths and delete areas for this section
+            section.lengths = [];
+            section.deleteAreas = [];
+            
+            // Recalculate all lengths from scratch
+            for (let i = 0; i < section.points.length - 1; i++) {
+                const p1 = section.points[i];
+                const p2 = section.points[i + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                const feetDistance = pixelDistance * calibrationFactor;
+                section.lengths.push(feetDistance);
+            }
+            
+            // Clear all delete areas for all sections
+            sections.forEach(s => s.deleteAreas = []);
+            
+            // Force a complete redraw - clear canvas completely first
+            if (canvas && ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                drawCanvas();
+                ctx.restore();
+            }
+            
+            updateMeasurementsList();
+            updateEstimate();
         }
 
         function resetCalibration() {
@@ -806,16 +1057,62 @@
             updateMeasurementsList();
         }
 
+        function saveState() {
+            // Save current state to history
+            const state = {
+                sections: sections.map(section => ({
+                    color: section.color,
+                    name: section.name,
+                    points: JSON.parse(JSON.stringify(section.points)),
+                    lengths: JSON.parse(JSON.stringify(section.lengths))
+                })),
+                currentSectionIndex: currentSectionIndex
+            };
+            
+            // Remove any states after current index (if we undid and then made changes)
+            history = history.slice(0, historyIndex + 1);
+            
+            // Add new state
+            history.push(state);
+            historyIndex++;
+            
+            // Limit history to 50 states
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+
+        function restoreState(state) {
+            sections = state.sections.map(section => ({
+                color: section.color,
+                name: section.name,
+                points: JSON.parse(JSON.stringify(section.points)),
+                lengths: JSON.parse(JSON.stringify(section.lengths)),
+                deleteAreas: []
+            }));
+            currentSectionIndex = state.currentSectionIndex;
+            
+            drawCanvas();
+            updateMeasurementsList();
+            updateEstimate();
+        }
+
         function undoPoint() {
-            const currentSection = sections[currentSectionIndex];
-            if (currentSection.points.length > 0) {
-                currentSection.points.pop();
-                if (currentSection.lengths.length > 0) {
-                    currentSection.lengths.pop();
-                }
-                drawCanvas();
-                updateMeasurementsList();
-                updateEstimate();
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(history[historyIndex]);
+            } else {
+                alert('Nothing to undo!');
+            }
+        }
+
+        function redoPoint() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreState(history[historyIndex]);
+            } else {
+                alert('Nothing to redo!');
             }
         }
 
@@ -824,9 +1121,33 @@
                 sections.forEach(section => {
                     section.points = [];
                     section.lengths = [];
+                    section.deleteAreas = [];
                 });
                 currentSectionIndex = 0;
-                drawCanvas();
+                
+                // Force complete canvas clear and redraw
+                if (canvas && ctx && image) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(image, 0, 0);
+                    
+                    // Redraw calibration if it exists
+                    if (calibrationPoints.length === 2) {
+                        ctx.strokeStyle = '#0066ff';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
+                        ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
+                        ctx.stroke();
+                        
+                        calibrationPoints.forEach(point => {
+                            ctx.fillStyle = '#0066ff';
+                            ctx.beginPath();
+                            ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                }
+                
                 updateMeasurementsList();
                 updateEstimate();
             }
@@ -1195,7 +1516,7 @@
                 shrubCount: document.getElementById('shrubCount').value,
                 shrubPrice: document.getElementById('shrubPrice').value,
                 pricePerFoot: document.getElementById('pricePerFoot').value,
-                imageData: image ? canvas.toDataURL('image/jpeg', 0.8) : null,
+                imageData: originalImageData, // Save original image, not canvas with drawings
                 timestamp: new Date().toISOString()
             };
 
@@ -1251,12 +1572,13 @@
                                 `✓ Calibrated! 1 pixel = ${calibrationFactor.toFixed(4)} feet`;
                         }
                         
-                        // Restore sections
+                        // Restore sections - make sure to clear deleteAreas
                         sections = projectData.sections.map(section => ({
                             color: section.color,
                             name: section.name,
                             points: section.points || [],
-                            lengths: section.lengths || []
+                            lengths: section.lengths || [],
+                            deleteAreas: [] // Clear this to force recalculation
                         }));
                         currentSectionIndex = projectData.currentSectionIndex || 0;
                         
@@ -1277,17 +1599,49 @@
                         
                         // Restore image
                         if (projectData.imageData) {
+                            originalImageData = projectData.imageData; // Restore original image data
                             image = new Image();
                             image.onload = function() {
-                                setupCanvas();
+                                // Setup canvas with event listeners
+                                canvas = document.getElementById('measureCanvas');
+                                ctx = canvas.getContext('2d');
+                                
+                                canvas.width = image.width;
+                                canvas.height = image.height;
+                                
+                                // CRITICAL: Clear the entire canvas first
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                
+                                // Remove old event listeners if they exist
+                                const newCanvas = canvas.cloneNode(true);
+                                canvas.parentNode.replaceChild(newCanvas, canvas);
+                                canvas = newCanvas;
+                                ctx = canvas.getContext('2d');
+                                
+                                // Clear again after cloning
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                
+                                // Add event listeners
+                                canvas.addEventListener('mousedown', handleMouseDown);
+                                canvas.addEventListener('mousemove', handleMouseMove);
+                                canvas.addEventListener('mouseup', handleMouseUp);
+                                canvas.addEventListener('click', handleCanvasClick);
+                                
                                 document.getElementById('canvasSection').style.display = 'block';
+                                
+                                // Draw everything fresh
+                                drawCanvas();
                                 updateMeasurementsList();
                                 updateEstimate();
                             };
-                            image.src = projectData.imageData;
+                            image.src = originalImageData;
+                        } else {
+                            // No image data, but still update UI
+                            updateMeasurementsList();
+                            updateEstimate();
                         }
                         
-                        alert('Project loaded successfully!');
+                        alert('Project loaded successfully! You can now edit measurements, delete points, or update pricing.');
                         
                     } catch (error) {
                         alert('Error loading project file: ' + error.message);
