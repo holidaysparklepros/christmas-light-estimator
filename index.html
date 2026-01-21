@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Light Estimation Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c5f2d;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .customer-info {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2c5f2d;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .section h2 {
+            color: #2c5f2d;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 3px dashed #2c5f2d;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #f0f7f0;
+            border-color: #1a3a1b;
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        .canvas-container {
+            position: relative;
+            overflow: auto;
+            max-height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        #measureCanvas {
+            cursor: crosshair;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: #2c5f2d;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a3a1b;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .calibration-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .calibration-input input {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .measurements-list {
+            margin-top: 15px;
+        }
+
+        .measurement-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .measurement-item.red { border-left-color: #ff0000; }
+        .measurement-item.orange { border-left-color: #ff8800; }
+        .measurement-item.green { border-left-color: #00cc00; }
+        .measurement-item.blue { border-left-color: #0066ff; }
+        .measurement-item.purple { border-left-color: #cc00cc; }
+        .measurement-item.pink { border-left-color: #ff66cc; }
+
+        .manual-measurement {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 2px solid #cc00cc;
+        }
+
+        .manual-measurement input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .estimate-box {
+            background: white;
+            border: 3px solid #2c5f2d;
+            border-radius: 10px;
+            padding: 20px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .estimate-box h2 {
+            color: #2c5f2d;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        .estimate-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .estimate-item label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .estimate-item .value {
+            font-weight: bold;
+            color: #2c5f2d;
+            font-size: 1.1em;
+        }
+
+        .estimate-total {
+            margin-top: 20px;
+            padding: 20px;
+            background: #2c5f2d;
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .estimate-total h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .estimate-total .total-value {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .pricing-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pricing-input input {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: right;
+        }
+
+        .wreath-entry {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 2px solid #2c5f2d;
+        }
+
+        .wreath-entry input, .wreath-entry select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2c5f2d;
+            color: white;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .zoom-btn:hover {
+            background: #1a3a1b;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 3px;
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎄 Christmas Light Estimation Tool 🎄</h1>
+        <p class="subtitle">Professional Roof Measuring & Quote Generator</p>
+
+        <!-- Customer Information -->
+        <div class="customer-info">
+            <div class="input-group">
+                <label>Customer Name:</label>
+                <input type="text" id="customerName" placeholder="Enter customer name">
+            </div>
+            <div class="input-group">
+                <label>Address:</label>
+                <input type="text" id="customerAddress" placeholder="Enter property address">
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <!-- Image Upload Section -->
+                <div class="section">
+                    <h2>📷 Step 1: Upload Roof Photo</h2>
+                    <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
+                        <input type="file" id="imageUpload" accept="image/*">
+                        <p style="font-size: 1.2em; color: #2c5f2d; font-weight: 600;">Click to upload roof image</p>
+                        <p style="color: #666; margin-top: 10px;">Supports JPG, PNG, WEBP</p>
+                    </div>
+                </div>
+
+                <!-- Canvas Section -->
+                <div class="section" id="canvasSection" style="display: none;">
+                    <h2>📏 Step 2: Calibrate & Measure</h2>
+                    
+                    <div id="calibrationStatus" class="status info">
+                        Click two points on a known distance (door, window, etc.)
+                    </div>
+
+                    <div class="calibration-input">
+                        <label>Known Distance:</label>
+                        <input type="number" id="knownDistance" value="8" step="0.5" min="0">
+                        <span>feet</span>
+                        <button class="btn-warning" onclick="resetCalibration()">Reset Calibration</button>
+                    </div>
+
+                    <div class="canvas-container" style="margin-top: 15px; position: relative;">
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" onclick="zoomIn()">+</button>
+                            <button class="zoom-btn" onclick="zoomOut()">−</button>
+                        </div>
+                        <canvas id="measureCanvas"></canvas>
+                    </div>
+
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ff0000;"></div>
+                            <span>Section 1</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ff8800;"></div>
+                            <span>Section 2</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #00cc00;"></div>
+                            <span>Section 3</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #0066ff;"></div>
+                            <span>Section 4</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #cc00cc;"></div>
+                            <span>Section 5</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ff66cc;"></div>
+                            <span>Section 6</span>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button class="btn-primary" onclick="startNewSection()">Start New Section</button>
+                        <button class="btn-warning" onclick="undoPoint()">Undo Point</button>
+                        <button class="btn-secondary" onclick="clearAll()">Clear All</button>
+                    </div>
+
+                    <div class="measurements-list" id="measurementsList"></div>
+                </div>
+
+                <!-- Manual Measurements -->
+                <div class="section">
+                    <h2>✍️ Manual Measurements</h2>
+                    <p style="color: #666; margin-bottom: 10px;">Add unmeasurable sides (back walls, hidden areas, etc.)</p>
+                    <div id="manualMeasurements"></div>
+                    <button class="btn-primary" onclick="addManualMeasurement()">+ Add Manual Entry</button>
+                </div>
+
+                <!-- Wreaths Section -->
+                <div class="section">
+                    <h2>🎁 Wreaths</h2>
+                    <div id="wreathsList"></div>
+                    <button class="btn-primary" onclick="addWreath()">+ Add Wreath</button>
+                </div>
+
+                <!-- Column & Shrub Wraps -->
+                <div class="section">
+                    <h2>🌲 Column & Shrub Wraps</h2>
+                    <div class="pricing-input" style="margin-bottom: 15px;">
+                        <label>Column Wraps:</label>
+                        <input type="number" id="columnCount" value="0" min="0" onchange="updateEstimate()">
+                        <span>@ $</span>
+                        <input type="number" id="columnPrice" value="40" step="1" min="0" onchange="updateEstimate()">
+                        <span>each</span>
+                    </div>
+                    <div class="pricing-input">
+                        <label>Shrub Wraps:</label>
+                        <input type="number" id="shrubCount" value="0" min="0" onchange="updateEstimate()">
+                        <span>@ $</span>
+                        <input type="number" id="shrubPrice" value="30" step="1" min="0" onchange="updateEstimate()">
+                        <span>each</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Estimate -->
+            <div>
+                <div class="estimate-box">
+                    <h2>💰 ESTIMATE</h2>
+
+                    <div class="estimate-item">
+                        <div>
+                            <label>Roofline Lights</label>
+                            <div style="font-size: 0.9em; color: #666;" id="rooflineDetails">0 ft</div>
+                        </div>
+                        <div class="value" id="rooflineTotal">$0.00</div>
+                    </div>
+
+                    <div class="pricing-input" style="margin-left: 20px; margin-bottom: 15px;">
+                        <span>Price per foot: $</span>
+                        <input type="number" id="pricePerFoot" value="8" step="0.5" min="0" onchange="updateEstimate()">
+                    </div>
+
+                    <div class="estimate-item">
+                        <div>
+                            <label>Wreaths</label>
+                            <div style="font-size: 0.9em; color: #666;" id="wreathDetails">None</div>
+                        </div>
+                        <div class="value" id="wreathTotal">$0.00</div>
+                    </div>
+
+                    <div class="estimate-item">
+                        <div>
+                            <label>Column Wraps</label>
+                            <div style="font-size: 0.9em; color: #666;" id="columnDetails">0 wraps</div>
+                        </div>
+                        <div class="value" id="columnTotal">$0.00</div>
+                    </div>
+
+                    <div class="estimate-item">
+                        <div>
+                            <label>Shrub Wraps</label>
+                            <div style="font-size: 0.9em; color: #666;" id="shrubDetails">0 wraps</div>
+                        </div>
+                        <div class="value" id="shrubTotal">$0.00</div>
+                    </div>
+
+                    <div class="estimate-total">
+                        <h3>TOTAL ESTIMATE</h3>
+                        <div class="total-value" id="grandTotal">$0.00</div>
+                    </div>
+
+                    <button class="btn-primary" onclick="exportPDF()" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.1em;">
+                        📄 Export to PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let canvas, ctx;
+        let image = null;
+        let zoomLevel = 1;
+        let calibrationPoints = [];
+        let calibrationFactor = null;
+        let isCalibrated = false;
+        
+        let sections = [
+            { color: '#ff0000', name: 'Section 1', points: [], lengths: [] },
+            { color: '#ff8800', name: 'Section 2', points: [], lengths: [] },
+            { color: '#00cc00', name: 'Section 3', points: [], lengths: [] },
+            { color: '#0066ff', name: 'Section 4', points: [], lengths: [] },
+            { color: '#cc00cc', name: 'Section 5', points: [], lengths: [] },
+            { color: '#ff66cc', name: 'Section 6', points: [], lengths: [] }
+        ];
+        
+        let currentSectionIndex = 0;
+        let manualMeasurements = [];
+        let wreaths = [];
+
+        // Initialize
+        document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                image = new Image();
+                image.onload = function() {
+                    setupCanvas();
+                    document.getElementById('canvasSection').style.display = 'block';
+                };
+                image.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setupCanvas() {
+            canvas = document.getElementById('measureCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.width = image.width;
+            canvas.height = image.height;
+            
+            drawCanvas();
+            
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+
+            // Draw calibration line
+            if (calibrationPoints.length === 2) {
+                ctx.strokeStyle = '#0066ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
+                ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
+                ctx.stroke();
+                
+                // Draw calibration points
+                calibrationPoints.forEach(point => {
+                    ctx.fillStyle = '#0066ff';
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            // Draw all sections
+            sections.forEach((section, sectionIdx) => {
+                if (section.points.length === 0) return;
+
+                ctx.strokeStyle = section.color;
+                ctx.lineWidth = 3;
+                ctx.fillStyle = section.color;
+
+                // Draw lines
+                for (let i = 0; i < section.points.length - 1; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(section.points[i].x, section.points[i].y);
+                    ctx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
+                    ctx.stroke();
+                }
+
+                // Draw points with numbers
+                section.points.forEach((point, idx) => {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((idx + 1).toString(), point.x, point.y + 4);
+                });
+            });
+
+            // Draw length labels on top of everything
+            sections.forEach((section, sectionIdx) => {
+                if (section.points.length === 0) return;
+
+                for (let i = 0; i < section.points.length - 1; i++) {
+                    if (section.lengths[i]) {
+                        const midX = (section.points[i].x + section.points[i + 1].x) / 2;
+                        const midY = (section.points[i].y + section.points[i + 1].y) / 2;
+                        
+                        const labelText = section.lengths[i].toFixed(1) + ' ft';
+                        ctx.font = 'bold 11px Arial';
+                        const textWidth = ctx.measureText(labelText).width;
+                        
+                        // Draw white background with rounded corners
+                        const padding = 4;
+                        const boxWidth = textWidth + padding * 2;
+                        const boxHeight = 16;
+                        
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                        ctx.beginPath();
+                        ctx.roundRect(midX - boxWidth/2, midY - boxHeight/2, boxWidth, boxHeight, 3);
+                        ctx.fill();
+                        
+                        // Draw text in dark color
+                        ctx.fillStyle = '#333';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(labelText, midX, midY);
+                    }
+                }
+            });
+        }
+
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (!isCalibrated) {
+                // Calibration mode
+                calibrationPoints.push({ x, y });
+                
+                if (calibrationPoints.length === 2) {
+                    const dx = calibrationPoints[1].x - calibrationPoints[0].x;
+                    const dy = calibrationPoints[1].y - calibrationPoints[0].y;
+                    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                    const knownDistance = parseFloat(document.getElementById('knownDistance').value);
+                    
+                    calibrationFactor = knownDistance / pixelDistance;
+                    isCalibrated = true;
+                    
+                    document.getElementById('calibrationStatus').className = 'status success';
+                    document.getElementById('calibrationStatus').textContent = 
+                        `✓ Calibrated! 1 pixel = ${calibrationFactor.toFixed(4)} feet`;
+                }
+                
+                drawCanvas();
+            } else {
+                // Measurement mode
+                const currentSection = sections[currentSectionIndex];
+                currentSection.points.push({ x, y });
+                
+                if (currentSection.points.length > 1) {
+                    const lastIdx = currentSection.points.length - 1;
+                    const p1 = currentSection.points[lastIdx - 1];
+                    const p2 = currentSection.points[lastIdx];
+                    
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                    const feetDistance = pixelDistance * calibrationFactor;
+                    
+                    currentSection.lengths.push(feetDistance);
+                }
+                
+                drawCanvas();
+                updateMeasurementsList();
+                updateEstimate();
+            }
+        }
+
+        function resetCalibration() {
+            calibrationPoints = [];
+            isCalibrated = false;
+            document.getElementById('calibrationStatus').className = 'status info';
+            document.getElementById('calibrationStatus').textContent = 
+                'Click two points on a known distance (door, window, etc.)';
+            drawCanvas();
+        }
+
+        function startNewSection() {
+            if (!isCalibrated) {
+                alert('Please calibrate first!');
+                return;
+            }
+            
+            currentSectionIndex++;
+            if (currentSectionIndex >= sections.length) {
+                alert('Maximum 6 sections reached!');
+                currentSectionIndex = sections.length - 1;
+                return;
+            }
+            
+            updateMeasurementsList();
+        }
+
+        function undoPoint() {
+            const currentSection = sections[currentSectionIndex];
+            if (currentSection.points.length > 0) {
+                currentSection.points.pop();
+                if (currentSection.lengths.length > 0) {
+                    currentSection.lengths.pop();
+                }
+                drawCanvas();
+                updateMeasurementsList();
+                updateEstimate();
+            }
+        }
+
+        function clearAll() {
+            if (confirm('Clear all measurements?')) {
+                sections.forEach(section => {
+                    section.points = [];
+                    section.lengths = [];
+                });
+                currentSectionIndex = 0;
+                drawCanvas();
+                updateMeasurementsList();
+                updateEstimate();
+            }
+        }
+
+        function zoomIn() {
+            zoomLevel += 0.2;
+            canvas.style.transform = `scale(${zoomLevel})`;
+            canvas.style.transformOrigin = 'top left';
+        }
+
+        function zoomOut() {
+            zoomLevel = Math.max(0.5, zoomLevel - 0.2);
+            canvas.style.transform = `scale(${zoomLevel})`;
+            canvas.style.transformOrigin = 'top left';
+        }
+
+        function updateMeasurementsList() {
+            const list = document.getElementById('measurementsList');
+            list.innerHTML = '';
+            
+            sections.forEach((section, idx) => {
+                if (section.points.length > 0) {
+                    const total = section.lengths.reduce((sum, len) => sum + len, 0);
+                    const colorClass = section.color.replace('#', '');
+                    
+                    const div = document.createElement('div');
+                    div.className = `measurement-item ${getColorName(section.color)}`;
+                    div.innerHTML = `
+                        <div>
+                            <strong>${section.name}</strong>: ${section.points.length} points
+                        </div>
+                        <div style="font-weight: bold;">${total.toFixed(1)} ft</div>
+                    `;
+                    list.appendChild(div);
+                }
+            });
+        }
+
+        function getColorName(hex) {
+            const colors = {
+                '#ff0000': 'red',
+                '#ff8800': 'orange',
+                '#00cc00': 'green',
+                '#0066ff': 'blue',
+                '#cc00cc': 'purple',
+                '#ff66cc': 'pink'
+            };
+            return colors[hex] || 'red';
+        }
+
+        function addManualMeasurement() {
+            const id = Date.now();
+            manualMeasurements.push({ id, label: '', length: 0 });
+            renderManualMeasurements();
+        }
+
+        function renderManualMeasurements() {
+            const container = document.getElementById('manualMeasurements');
+            container.innerHTML = '';
+            
+            manualMeasurements.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'manual-measurement';
+                div.innerHTML = `
+                    <input type="text" placeholder="Label (e.g., 'Back wall')" 
+                           value="${item.label}" 
+                           onchange="updateManualLabel(${item.id}, this.value)">
+                    <input type="number" placeholder="Length in feet" 
+                           value="${item.length}" step="0.5" min="0"
+                           onchange="updateManualLength(${item.id}, this.value)">
+                    <button class="remove-btn" onclick="removeManualMeasurement(${item.id})">Remove</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateManualLabel(id, value) {
+            const item = manualMeasurements.find(m => m.id === id);
+            if (item) {
+                item.label = value;
+                updateEstimate();
+            }
+        }
+
+        function updateManualLength(id, value) {
+            const item = manualMeasurements.find(m => m.id === id);
+            if (item) {
+                item.length = parseFloat(value) || 0;
+                updateEstimate();
+            }
+        }
+
+        function removeManualMeasurement(id) {
+            manualMeasurements = manualMeasurements.filter(m => m.id !== id);
+            renderManualMeasurements();
+            updateEstimate();
+        }
+
+        function addWreath() {
+            const id = Date.now();
+            wreaths.push({ id, size: '24', quantity: 1, price: 25 });
+            renderWreaths();
+        }
+
+        function renderWreaths() {
+            const container = document.getElementById('wreathsList');
+            container.innerHTML = '';
+            
+            wreaths.forEach(wreath => {
+                const div = document.createElement('div');
+                div.className = 'wreath-entry';
+                div.innerHTML = `
+                    <label>Size:</label>
+                    <select onchange="updateWreathSize(${wreath.id}, this.value)">
+                        <option value="24" ${wreath.size === '24' ? 'selected' : ''}>24 inch</option>
+                        <option value="36" ${wreath.size === '36' ? 'selected' : ''}>36 inch</option>
+                        <option value="48" ${wreath.size === '48' ? 'selected' : ''}>48 inch</option>
+                    </select>
+                    <label>Quantity:</label>
+                    <input type="number" value="${wreath.quantity}" min="1" 
+                           onchange="updateWreathQuantity(${wreath.id}, this.value)">
+                    <label>Price Each: $</label>
+                    <input type="number" value="${wreath.price}" step="1" min="0"
+                           onchange="updateWreathPrice(${wreath.id}, this.value)">
+                    <button class="remove-btn" onclick="removeWreath(${wreath.id})">Remove</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            updateEstimate();
+        }
+
+        function updateWreathSize(id, size) {
+            const wreath = wreaths.find(w => w.id === id);
+            if (wreath) {
+                wreath.size = size;
+                updateEstimate();
+            }
+        }
+
+        function updateWreathQuantity(id, quantity) {
+            const wreath = wreaths.find(w => w.id === id);
+            if (wreath) {
+                wreath.quantity = parseInt(quantity) || 1;
+                updateEstimate();
+            }
+        }
+
+        function updateWreathPrice(id, price) {
+            const wreath = wreaths.find(w => w.id === id);
+            if (wreath) {
+                wreath.price = parseFloat(price) || 0;
+                updateEstimate();
+            }
+        }
+
+        function removeWreath(id) {
+            wreaths = wreaths.filter(w => w.id !== id);
+            renderWreaths();
+        }
+
+        function updateEstimate() {
+            // Calculate roofline total
+            let rooflineFootage = 0;
+            sections.forEach(section => {
+                rooflineFootage += section.lengths.reduce((sum, len) => sum + len, 0);
+            });
+            
+            manualMeasurements.forEach(item => {
+                rooflineFootage += item.length;
+            });
+            
+            const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
+            const rooflineTotal = rooflineFootage * pricePerFoot;
+            
+            document.getElementById('rooflineDetails').textContent = `${rooflineFootage.toFixed(1)} ft × $${pricePerFoot}/ft`;
+            document.getElementById('rooflineTotal').textContent = `$${rooflineTotal.toFixed(2)}`;
+
+            // Calculate wreath total
+            let wreathTotal = 0;
+            let wreathDetailsText = [];
+            wreaths.forEach(wreath => {
+                const subtotal = wreath.quantity * wreath.price;
+                wreathTotal += subtotal;
+                wreathDetailsText.push(`${wreath.quantity} × ${wreath.size}" @ $${wreath.price} each`);
+            });
+            
+            document.getElementById('wreathDetails').textContent = 
+                wreathDetailsText.length > 0 ? wreathDetailsText.join(', ') : 'None';
+            document.getElementById('wreathTotal').textContent = `$${wreathTotal.toFixed(2)}`;
+
+            // Calculate column wraps
+            const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
+            const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
+            const columnTotal = columnCount * columnPrice;
+            
+            document.getElementById('columnDetails').textContent = `${columnCount} wraps`;
+            document.getElementById('columnTotal').textContent = `$${columnTotal.toFixed(2)}`;
+
+            // Calculate shrub wraps
+            const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
+            const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
+            const shrubTotal = shrubCount * shrubPrice;
+            
+            document.getElementById('shrubDetails').textContent = `${shrubCount} wraps`;
+            document.getElementById('shrubTotal').textContent = `$${shrubTotal.toFixed(2)}`;
+
+            // Grand total
+            const grandTotal = rooflineTotal + wreathTotal + columnTotal + shrubTotal;
+            document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const customerName = document.getElementById('customerName').value || 'Customer';
+            const customerAddress = document.getElementById('customerAddress').value || '';
+            
+            // Title
+            doc.setFontSize(22);
+            doc.setTextColor(44, 95, 45);
+            doc.text('Christmas Light Installation Quote', 105, 20, { align: 'center' });
+            
+            // Customer info
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Customer: ${customerName}`, 20, 40);
+            doc.text(`Address: ${customerAddress}`, 20, 48);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
+            
+            // Line
+            doc.setDrawColor(44, 95, 45);
+            doc.setLineWidth(0.5);
+            doc.line(20, 62, 190, 62);
+            
+            let yPos = 75;
+            
+            // Add measured image if available
+            if (canvas && image) {
+                doc.setFontSize(14);
+                doc.setTextColor(44, 95, 45);
+                doc.text('Measured Roof Photo:', 20, yPos);
+                yPos += 8;
+                
+                // Get canvas as image
+                const canvasImage = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // Calculate dimensions to fit on page
+                const maxWidth = 170;
+                const maxHeight = 100;
+                let imgWidth = canvas.width;
+                let imgHeight = canvas.height;
+                
+                // Scale to fit
+                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                imgWidth = imgWidth * ratio;
+                imgHeight = imgHeight * ratio;
+                
+                doc.addImage(canvasImage, 'JPEG', 20, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 15;
+                
+                // Add new page if needed
+                if (yPos > 200) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            // Roofline
+            const rooflineFootage = sections.reduce((sum, s) => 
+                sum + s.lengths.reduce((s2, l) => s2 + l, 0), 0) + 
+                manualMeasurements.reduce((sum, m) => sum + m.length, 0);
+            const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
+            const rooflineTotal = rooflineFootage * pricePerFoot;
+            
+            doc.setFontSize(14);
+            doc.text('Roofline Lights:', 20, yPos);
+            doc.text(`${rooflineFootage.toFixed(1)} ft × $${pricePerFoot}/ft`, 80, yPos);
+            doc.text(`$${rooflineTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+            yPos += 10;
+            
+            // Wreaths
+            if (wreaths.length > 0) {
+                doc.text('Wreaths:', 20, yPos);
+                yPos += 8;
+                wreaths.forEach(wreath => {
+                    doc.setFontSize(11);
+                    const subtotal = wreath.quantity * wreath.price;
+                    doc.text(`  ${wreath.quantity} × ${wreath.size}" @ $${wreath.price}`, 25, yPos);
+                    doc.text(`$${subtotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                    yPos += 7;
+                });
+                yPos += 3;
+            }
+            
+            // Columns
+            const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
+            const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
+            const columnTotal = columnCount * columnPrice;
+            
+            if (columnCount > 0) {
+                doc.setFontSize(14);
+                doc.text('Column Wraps:', 20, yPos);
+                doc.text(`${columnCount} × $${columnPrice}`, 80, yPos);
+                doc.text(`$${columnTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                yPos += 10;
+            }
+            
+            // Shrubs
+            const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
+            const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
+            const shrubTotal = shrubCount * shrubPrice;
+            
+            if (shrubCount > 0) {
+                doc.setFontSize(14);
+                doc.text('Shrub Wraps:', 20, yPos);
+                doc.text(`${shrubCount} × $${shrubPrice}`, 80, yPos);
+                doc.text(`$${shrubTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                yPos += 10;
+            }
+            
+            // Total
+            yPos += 5;
+            doc.setDrawColor(44, 95, 45);
+            doc.line(20, yPos, 190, yPos);
+            yPos += 10;
+            
+            doc.setFontSize(18);
+            doc.setTextColor(44, 95, 45);
+            const grandTotal = rooflineTotal + wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0) + 
+                              columnTotal + shrubTotal;
+            doc.text('TOTAL:', 20, yPos);
+            doc.text(`$${grandTotal.toFixed(2)}`, 190, yPos, { align: 'right' });
+            
+            // Save
+            const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
+            doc.save(filename);
+        }
+    </script>
+</body>
+</html>
