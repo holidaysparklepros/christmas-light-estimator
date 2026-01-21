@@ -499,6 +499,8 @@
                         <button class="btn-primary" onclick="startNewSection()">Start New Section</button>
                         <button class="btn-warning" onclick="undoPoint()">Undo Point</button>
                         <button class="btn-secondary" onclick="clearAll()">Clear All</button>
+                        <button class="btn-primary" onclick="saveProject()" style="background: #17a2b8;">💾 Save Project</button>
+                        <button class="btn-primary" onclick="loadProject()" style="background: #6c757d;">📂 Load Project</button>
                     </div>
 
                     <div class="measurements-list" id="measurementsList"></div>
@@ -1164,6 +1166,138 @@
             // Save
             const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
             doc.save(filename);
+        }
+
+        // Project Save/Load Functions
+        function saveProject() {
+            const customerName = document.getElementById('customerName').value || 'Untitled';
+            
+            // Create project data object
+            const projectData = {
+                version: '1.0',
+                customerName: document.getElementById('customerName').value,
+                customerAddress: document.getElementById('customerAddress').value,
+                calibrationFactor: calibrationFactor,
+                calibrationPoints: calibrationPoints,
+                isCalibrated: isCalibrated,
+                knownDistance: document.getElementById('knownDistance').value,
+                sections: sections.map(section => ({
+                    color: section.color,
+                    name: section.name,
+                    points: section.points,
+                    lengths: section.lengths
+                })),
+                currentSectionIndex: currentSectionIndex,
+                manualMeasurements: manualMeasurements,
+                wreaths: wreaths,
+                columnCount: document.getElementById('columnCount').value,
+                columnPrice: document.getElementById('columnPrice').value,
+                shrubCount: document.getElementById('shrubCount').value,
+                shrubPrice: document.getElementById('shrubPrice').value,
+                pricePerFoot: document.getElementById('pricePerFoot').value,
+                imageData: image ? canvas.toDataURL('image/jpeg', 0.8) : null,
+                timestamp: new Date().toISOString()
+            };
+
+            // Convert to JSON and create download
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${customerName.replace(/\s+/g, '_')}_Project.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Project saved! You can load this file later to continue editing.');
+        }
+
+        function loadProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const projectData = JSON.parse(event.target.result);
+                        
+                        // Validate project data
+                        if (!projectData.version) {
+                            alert('Invalid project file!');
+                            return;
+                        }
+                        
+                        // Restore customer information
+                        document.getElementById('customerName').value = projectData.customerName || '';
+                        document.getElementById('customerAddress').value = projectData.customerAddress || '';
+                        
+                        // Restore calibration
+                        calibrationFactor = projectData.calibrationFactor;
+                        calibrationPoints = projectData.calibrationPoints || [];
+                        isCalibrated = projectData.isCalibrated || false;
+                        document.getElementById('knownDistance').value = projectData.knownDistance || 8;
+                        
+                        if (isCalibrated) {
+                            document.getElementById('calibrationStatus').className = 'status success';
+                            document.getElementById('calibrationStatus').textContent = 
+                                `✓ Calibrated! 1 pixel = ${calibrationFactor.toFixed(4)} feet`;
+                        }
+                        
+                        // Restore sections
+                        sections = projectData.sections.map(section => ({
+                            color: section.color,
+                            name: section.name,
+                            points: section.points || [],
+                            lengths: section.lengths || []
+                        }));
+                        currentSectionIndex = projectData.currentSectionIndex || 0;
+                        
+                        // Restore manual measurements
+                        manualMeasurements = projectData.manualMeasurements || [];
+                        renderManualMeasurements();
+                        
+                        // Restore wreaths
+                        wreaths = projectData.wreaths || [];
+                        renderWreaths();
+                        
+                        // Restore pricing
+                        document.getElementById('columnCount').value = projectData.columnCount || 0;
+                        document.getElementById('columnPrice').value = projectData.columnPrice || 40;
+                        document.getElementById('shrubCount').value = projectData.shrubCount || 0;
+                        document.getElementById('shrubPrice').value = projectData.shrubPrice || 30;
+                        document.getElementById('pricePerFoot').value = projectData.pricePerFoot || 8;
+                        
+                        // Restore image
+                        if (projectData.imageData) {
+                            image = new Image();
+                            image.onload = function() {
+                                setupCanvas();
+                                document.getElementById('canvasSection').style.display = 'block';
+                                updateMeasurementsList();
+                                updateEstimate();
+                            };
+                            image.src = projectData.imageData;
+                        }
+                        
+                        alert('Project loaded successfully!');
+                        
+                    } catch (error) {
+                        alert('Error loading project file: ' + error.message);
+                        console.error('Load error:', error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
         }
     </script>
 </body>
