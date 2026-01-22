@@ -792,6 +792,58 @@
                         <div class="total-value" id="grandTotal">$0.00</div>
                     </div>
 
+                    <!-- Export Options -->
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #333;">📄 Export Options</h4>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Logo (optional):</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <input type="file" id="logoUpload" accept="image/*" 
+                                       style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 5px;" 
+                                       onchange="saveLogo()">
+                                <button class="btn-secondary" onclick="clearLogo()" style="padding: 8px 15px; white-space: nowrap;">Clear Logo</button>
+                            </div>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Logo saved until cleared - appears at bottom of PDF</p>
+                            <div id="logoPreview" style="margin-top: 10px; display: none;">
+                                <img id="logoPreviewImg" style="max-width: 100px; max-height: 60px; border: 2px solid #ddd; border-radius: 5px;">
+                                <p style="color: #28a745; font-size: 0.85em; margin-top: 5px;">✓ Logo saved and ready</p>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <strong style="display: block; margin-bottom: 8px; color: #555;">Show on PDF:</strong>
+                            
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="exportShowMeasurements" checked 
+                                       style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>Show measurements (footage amounts)</span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="exportShowPricePerFoot" checked 
+                                       style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>Show price per foot</span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="exportShowWreathPrices" checked 
+                                       style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>Show individual wreath prices</span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="exportShowWrapPrices" checked 
+                                       style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>Show column/shrub wrap unit prices</span>
+                            </label>
+                        </div>
+                        
+                        <p style="font-size: 0.85em; color: #666; font-style: italic;">
+                            💡 Uncheck items to hide pricing details from customer PDF
+                        </p>
+                    </div>
+
                     <button class="btn-primary" onclick="exportPDF()" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.1em;">
                         📄 Export to PDF
                     </button>
@@ -805,6 +857,7 @@
         let canvas, ctx;
         let image = null;
         let originalImageData = null; // Store original image without drawings
+        let savedLogoData = localStorage.getItem('christmasLightLogo') || null; // Persistent logo storage
         let zoomLevel = 1;
         let calibrationPoints = [];
         let calibrationFactor = null;
@@ -856,9 +909,6 @@
             }
         }
 
-        // Initialize
-        document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
-
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -902,6 +952,44 @@
             // Redraw with new point sizes
             drawCanvas();
         }
+
+        // Logo Management Functions
+        function saveLogo() {
+            const logoFile = document.getElementById('logoUpload').files[0];
+            if (!logoFile) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                savedLogoData = e.target.result;
+                localStorage.setItem('christmasLightLogo', savedLogoData);
+                
+                // Show preview
+                document.getElementById('logoPreviewImg').src = savedLogoData;
+                document.getElementById('logoPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(logoFile);
+        }
+
+        function clearLogo() {
+            savedLogoData = null;
+            localStorage.removeItem('christmasLightLogo');
+            document.getElementById('logoUpload').value = '';
+            document.getElementById('logoPreview').style.display = 'none';
+            alert('Logo cleared!');
+        }
+
+        // Load saved logo on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
+            
+            // Show logo preview if exists
+            if (savedLogoData) {
+                document.getElementById('logoPreviewImg').src = savedLogoData;
+                document.getElementById('logoPreview').style.display = 'block';
+            }
+        });
+
+        // Export as Image Function
 
         function setupCanvas() {
             canvas = document.getElementById('measureCanvas');
@@ -1802,125 +1890,341 @@
             const customerName = document.getElementById('customerName').value || 'Customer';
             const customerAddress = document.getElementById('customerAddress').value || '';
             
-            // Title
-            doc.setFontSize(22);
-            doc.setTextColor(44, 95, 45);
-            doc.text('Christmas Light Installation Quote', 105, 20, { align: 'center' });
+            // Get export options
+            const showMeasurements = document.getElementById('exportShowMeasurements').checked;
+            const showPricePerFoot = document.getElementById('exportShowPricePerFoot').checked;
+            const showWreathPrices = document.getElementById('exportShowWreathPrices').checked;
+            const showWrapPrices = document.getElementById('exportShowWrapPrices').checked;
             
-            // Customer info
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text(`Customer: ${customerName}`, 20, 40);
-            doc.text(`Address: ${customerAddress}`, 20, 48);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
+            let yPos = 20;
+            let logoData = savedLogoData; // Use persistent saved logo
             
-            // Line
-            doc.setDrawColor(44, 95, 45);
-            doc.setLineWidth(0.5);
-            doc.line(20, 62, 190, 62);
+            // If no saved logo, check if one was just uploaded
+            const logoFile = document.getElementById('logoUpload').files[0];
+            if (!logoData && logoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoData = e.target.result;
+                    generatePDFContent();
+                };
+                reader.readAsDataURL(logoFile);
+            } else {
+                generatePDFContent();
+            }
             
-            let yPos = 75;
-            
-            // Add measured image if available
-            if (canvas && image) {
-                doc.setFontSize(14);
+            function generatePDFContent() {
+                // Title
+                doc.setFontSize(22);
                 doc.setTextColor(44, 95, 45);
-                doc.text('Measured Roof Photo:', 20, yPos);
-                yPos += 8;
+                doc.text('Christmas Light Installation Quote', 105, 20, { align: 'center' });
                 
-                // Get canvas as image
-                const canvasImage = canvas.toDataURL('image/jpeg', 0.7);
+                // Customer info
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Customer: ${customerName}`, 20, 40);
+                doc.text(`Address: ${customerAddress}`, 20, 48);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
                 
-                // Calculate dimensions to fit on page
-                const maxWidth = 170;
-                const maxHeight = 100;
-                let imgWidth = canvas.width;
-                let imgHeight = canvas.height;
+                // Line
+                doc.setDrawColor(44, 95, 45);
+                doc.setLineWidth(0.5);
+                doc.line(20, 62, 190, 62);
                 
-                // Scale to fit
-                const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-                imgWidth = imgWidth * ratio;
-                imgHeight = imgHeight * ratio;
+                yPos = 75;
                 
-                doc.addImage(canvasImage, 'JPEG', 20, yPos, imgWidth, imgHeight);
-                yPos += imgHeight + 15;
+                // Add photo - with or without measurement labels (NO calibration line in either mode)
+                if (canvas && image) {
+                    doc.setFontSize(14);
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('Roof Photo:', 20, yPos);
+                    yPos += 8;
+                    
+                    let photoImage;
+                    
+                    // Always create temp canvas to exclude calibration line
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // Draw base image
+                    tempCtx.drawImage(image, 0, 0);
+                    
+                    // Skip calibration line entirely
+                    
+                    if (showMeasurements) {
+                        // Draw sections with measurement labels
+                        sections.forEach((section) => {
+                            if (section.points.length === 0) return;
+                            
+                            const isMobile = forceMobileMode || window.innerWidth < 768;
+                            const measurePointSize = isMobile ? 50 : 8;
+                            const pointNumberFontSize = isMobile ? 32 : 12;
+                            const lineWidth = isMobile ? 12 : 3;
+                            
+                            tempCtx.strokeStyle = section.color;
+                            tempCtx.lineWidth = lineWidth;
+                            
+                            // Draw lines
+                            for (let i = 0; i < section.points.length - 1; i++) {
+                                if (section.points[i] && section.points[i + 1]) {
+                                    tempCtx.beginPath();
+                                    tempCtx.moveTo(section.points[i].x, section.points[i].y);
+                                    tempCtx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
+                                    tempCtx.stroke();
+                                }
+                            }
+                            
+                            // Draw points with numbers
+                            section.points.forEach((point, idx) => {
+                                if (point) {
+                                    tempCtx.fillStyle = section.color;
+                                    tempCtx.beginPath();
+                                    tempCtx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
+                                    tempCtx.fill();
+                                    
+                                    tempCtx.strokeStyle = 'white';
+                                    tempCtx.lineWidth = 2;
+                                    tempCtx.stroke();
+                                    
+                                    tempCtx.fillStyle = 'white';
+                                    tempCtx.font = `bold ${pointNumberFontSize}px Arial`;
+                                    tempCtx.textAlign = 'center';
+                                    tempCtx.textBaseline = 'middle';
+                                    tempCtx.fillText((idx + 1).toString(), point.x, point.y);
+                                }
+                            });
+                        });
+                        
+                        // Draw measurement labels (from original canvas logic)
+                        sections.forEach((section) => {
+                            if (section.points.length === 0) return;
+                            
+                            const isMobile = forceMobileMode || window.innerWidth < 768;
+                            const labelFontSize = isMobile ? 14 : 11;
+                            const xButtonSize = isMobile ? 24 : 16;
+                            const boxHeight = isMobile ? 24 : 16;
+
+                            for (let i = 0; i < section.points.length - 1; i++) {
+                                if (section.lengths[i] && section.points[i] && section.points[i + 1]) {
+                                    const midX = (section.points[i].x + section.points[i + 1].x) / 2;
+                                    const midY = (section.points[i].y + section.points[i + 1].y) / 2;
+                                    
+                                    const labelText = section.lengths[i].toFixed(1) + ' ft';
+                                    tempCtx.font = `bold ${labelFontSize}px Arial`;
+                                    const textWidth = tempCtx.measureText(labelText).width;
+                                    
+                                    const padding = isMobile ? 6 : 4;
+                                    const boxWidth = textWidth + padding * 2;
+                                    
+                                    tempCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                                    tempCtx.beginPath();
+                                    tempCtx.roundRect(midX - boxWidth/2, midY - boxHeight/2, boxWidth, boxHeight, 3);
+                                    tempCtx.fill();
+                                    
+                                    tempCtx.fillStyle = '#333';
+                                    tempCtx.textAlign = 'center';
+                                    tempCtx.textBaseline = 'middle';
+                                    tempCtx.fillText(labelText, midX, midY);
+                                }
+                            }
+                        });
+                        
+                        photoImage = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    } else {
+                        // Just points and lines, NO LABELS (tempCanvas already created above)
+                        
+                        // Draw all sections with points and lines, but NO LABELS
+                        sections.forEach((section) => {
+                            if (section.points.length === 0) return;
+                            
+                            const isMobile = forceMobileMode || window.innerWidth < 768;
+                            const measurePointSize = isMobile ? 50 : 8;
+                            const pointNumberFontSize = isMobile ? 32 : 12;
+                            const lineWidth = isMobile ? 12 : 3;
+                            
+                            tempCtx.strokeStyle = section.color;
+                            tempCtx.lineWidth = lineWidth;
+                            
+                            // Draw lines
+                            for (let i = 0; i < section.points.length - 1; i++) {
+                                if (section.points[i] && section.points[i + 1]) {
+                                    tempCtx.beginPath();
+                                    tempCtx.moveTo(section.points[i].x, section.points[i].y);
+                                    tempCtx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
+                                    tempCtx.stroke();
+                                }
+                            }
+                            
+                            // Draw points with numbers
+                            section.points.forEach((point, idx) => {
+                                if (point) {
+                                    tempCtx.fillStyle = section.color;
+                                    tempCtx.beginPath();
+                                    tempCtx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
+                                    tempCtx.fill();
+                                    
+                                    tempCtx.strokeStyle = 'white';
+                                    tempCtx.lineWidth = 2;
+                                    tempCtx.stroke();
+                                    
+                                    tempCtx.fillStyle = 'white';
+                                    tempCtx.font = `bold ${pointNumberFontSize}px Arial`;
+                                    tempCtx.textAlign = 'center';
+                                    tempCtx.textBaseline = 'middle';
+                                    tempCtx.fillText((idx + 1).toString(), point.x, point.y);
+                                }
+                            });
+                        });
+                        
+                        photoImage = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    }
+                    
+                    const maxWidth = 170;
+                    const maxHeight = 100;
+                    let imgWidth = canvas.width;
+                    let imgHeight = canvas.height;
+                    
+                    const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+                    imgWidth = imgWidth * ratio;
+                    imgHeight = imgHeight * ratio;
+                    
+                    doc.addImage(photoImage, 'JPEG', 20, yPos, imgWidth, imgHeight);
+                    yPos += imgHeight + 15;
+                    
+                    if (yPos > 200) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                }
                 
-                // Add new page if needed
-                if (yPos > 200) {
-                    doc.addPage();
-                    yPos = 20;
+                // Roofline
+                const rooflineFootage = sections.reduce((sum, s) => 
+                    sum + s.lengths.reduce((s2, l) => s2 + l, 0), 0) + 
+                    manualMeasurements.reduce((sum, m) => sum + m.length, 0);
+                const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
+                const rooflineTotal = rooflineFootage * pricePerFoot;
+                
+                doc.setFontSize(14);
+                doc.text('Roofline Lights:', 20, yPos);
+                
+                if (showMeasurements && showPricePerFoot) {
+                    doc.text(`${rooflineFootage.toFixed(1)} ft × $${pricePerFoot}/ft`, 80, yPos);
+                } else if (showMeasurements) {
+                    doc.text(`${rooflineFootage.toFixed(1)} ft`, 80, yPos);
+                } else if (showPricePerFoot) {
+                    doc.text(`$${pricePerFoot}/ft`, 80, yPos);
+                }
+                
+                doc.text(`$${rooflineTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                yPos += 10;
+                
+                // Wreaths
+                if (wreaths.length > 0) {
+                    doc.text('Wreaths:', 20, yPos);
+                    yPos += 8;
+                    
+                    const wreathTotal = wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0);
+                    
+                    if (showWreathPrices) {
+                        wreaths.forEach(wreath => {
+                            doc.setFontSize(11);
+                            const subtotal = wreath.quantity * wreath.price;
+                            doc.text(`  ${wreath.quantity} × ${wreath.size}" @ $${wreath.price}`, 25, yPos);
+                            doc.text(`$${subtotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                            yPos += 7;
+                        });
+                    } else {
+                        doc.setFontSize(11);
+                        const totalWreaths = wreaths.reduce((sum, w) => sum + w.quantity, 0);
+                        doc.text(`  ${totalWreaths} wreaths (various sizes)`, 25, yPos);
+                        doc.text(`$${wreathTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                        yPos += 7;
+                    }
+                    yPos += 3;
+                }
+                
+                // Columns
+                const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
+                const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
+                const columnTotal = columnCount * columnPrice;
+                
+                if (columnCount > 0) {
+                    doc.setFontSize(14);
+                    
+                    if (showWrapPrices) {
+                        doc.text('Column Wraps:', 20, yPos);
+                        doc.text(`${columnCount} × $${columnPrice}`, 80, yPos);
+                    } else {
+                        doc.text('Column Wraps:', 20, yPos);
+                    }
+                    
+                    doc.text(`$${columnTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                    yPos += 10;
+                }
+                
+                // Shrubs
+                const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
+                const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
+                const shrubTotal = shrubCount * shrubPrice;
+                
+                if (shrubCount > 0) {
+                    doc.setFontSize(14);
+                    
+                    if (showWrapPrices) {
+                        doc.text('Shrub Wraps:', 20, yPos);
+                        doc.text(`${shrubCount} × $${shrubPrice}`, 80, yPos);
+                    } else {
+                        doc.text('Shrub Wraps:', 20, yPos);
+                    }
+                    
+                    doc.text(`$${shrubTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
+                    yPos += 10;
+                }
+                
+                // Total
+                yPos += 5;
+                doc.setDrawColor(44, 95, 45);
+                doc.line(20, yPos, 190, yPos);
+                yPos += 10;
+                
+                doc.setFontSize(18);
+                doc.setTextColor(44, 95, 45);
+                const grandTotal = rooflineTotal + wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0) + 
+                                  columnTotal + shrubTotal;
+                doc.text('TOTAL:', 20, yPos);
+                doc.text(`$${grandTotal.toFixed(2)}`, 190, yPos, { align: 'right' });
+                
+                // Add logo at bottom if available
+                if (logoData) {
+                    const logoImg = new Image();
+                    logoImg.onload = function() {
+                        // Larger logo at bottom center
+                        const logoMaxWidth = 80;
+                        const logoMaxHeight = 60;
+                        let logoWidth = logoImg.width;
+                        let logoHeight = logoImg.height;
+                        const logoRatio = Math.min(logoMaxWidth / logoWidth, logoMaxHeight / logoHeight);
+                        logoWidth = logoWidth * logoRatio;
+                        logoHeight = logoHeight * logoRatio;
+                        
+                        // Center at bottom of page (moved higher to prevent cutoff)
+                        const logoX = (210 - logoWidth) / 2; // 210 is A4 width
+                        const logoY = 250; // Moved up from 270 to prevent cutoff
+                        
+                        doc.addImage(logoData, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+                        
+                        // Save after logo is added
+                        const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
+                        doc.save(filename);
+                    };
+                    logoImg.src = logoData;
+                } else {
+                    // No logo, save immediately
+                    const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
+                    doc.save(filename);
                 }
             }
-            
-            // Roofline
-            const rooflineFootage = sections.reduce((sum, s) => 
-                sum + s.lengths.reduce((s2, l) => s2 + l, 0), 0) + 
-                manualMeasurements.reduce((sum, m) => sum + m.length, 0);
-            const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
-            const rooflineTotal = rooflineFootage * pricePerFoot;
-            
-            doc.setFontSize(14);
-            doc.text('Roofline Lights:', 20, yPos);
-            doc.text(`${rooflineFootage.toFixed(1)} ft × $${pricePerFoot}/ft`, 80, yPos);
-            doc.text(`$${rooflineTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
-            yPos += 10;
-            
-            // Wreaths
-            if (wreaths.length > 0) {
-                doc.text('Wreaths:', 20, yPos);
-                yPos += 8;
-                wreaths.forEach(wreath => {
-                    doc.setFontSize(11);
-                    const subtotal = wreath.quantity * wreath.price;
-                    doc.text(`  ${wreath.quantity} × ${wreath.size}" @ $${wreath.price}`, 25, yPos);
-                    doc.text(`$${subtotal.toFixed(2)}`, 160, yPos, { align: 'right' });
-                    yPos += 7;
-                });
-                yPos += 3;
-            }
-            
-            // Columns
-            const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
-            const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
-            const columnTotal = columnCount * columnPrice;
-            
-            if (columnCount > 0) {
-                doc.setFontSize(14);
-                doc.text('Column Wraps:', 20, yPos);
-                doc.text(`${columnCount} × $${columnPrice}`, 80, yPos);
-                doc.text(`$${columnTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
-                yPos += 10;
-            }
-            
-            // Shrubs
-            const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
-            const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
-            const shrubTotal = shrubCount * shrubPrice;
-            
-            if (shrubCount > 0) {
-                doc.setFontSize(14);
-                doc.text('Shrub Wraps:', 20, yPos);
-                doc.text(`${shrubCount} × $${shrubPrice}`, 80, yPos);
-                doc.text(`$${shrubTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
-                yPos += 10;
-            }
-            
-            // Total
-            yPos += 5;
-            doc.setDrawColor(44, 95, 45);
-            doc.line(20, yPos, 190, yPos);
-            yPos += 10;
-            
-            doc.setFontSize(18);
-            doc.setTextColor(44, 95, 45);
-            const grandTotal = rooflineTotal + wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0) + 
-                              columnTotal + shrubTotal;
-            doc.text('TOTAL:', 20, yPos);
-            doc.text(`$${grandTotal.toFixed(2)}`, 190, yPos, { align: 'right' });
-            
-            // Save
-            const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
-            doc.save(filename);
         }
 
         // Project Save/Load Functions
