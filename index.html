@@ -946,6 +946,10 @@
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
             
+            // Larger detection radius on mobile
+            const isMobile = window.innerWidth < 768;
+            const detectionRadius = isMobile ? 30 : 12;
+            
             // Check if clicking on a point to drag
             for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
                 const section = sections[sectionIdx];
@@ -953,7 +957,7 @@
                     const point = section.points[pointIdx];
                     const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
                     
-                    if (distance <= 12) { // Within 12 pixels of point
+                    if (distance <= detectionRadius) { // Larger hit area on mobile
                         draggingPoint = { sectionIdx, pointIdx };
                         dragStartPos = { x, y };
                         canvas.style.cursor = 'move';
@@ -974,6 +978,9 @@
                     const x = (e.clientX - rect.left) * scaleX;
                     const y = (e.clientY - rect.top) * scaleY;
                     
+                    const isMobile = window.innerWidth < 768;
+                    const detectionRadius = isMobile ? 30 : 12;
+                    
                     let overPoint = false;
                     for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
                         const section = sections[sectionIdx];
@@ -981,7 +988,7 @@
                             const point = section.points[pointIdx];
                             const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
                             
-                            if (distance <= 12) {
+                            if (distance <= detectionRadius) {
                                 overPoint = true;
                                 break;
                             }
@@ -1050,21 +1057,32 @@
             // Redraw the base image
             ctx.drawImage(image, 0, 0);
 
+            // Calculate point size based on viewport (larger on mobile)
+            const isMobile = window.innerWidth < 768;
+            const calibrationPointSize = isMobile ? 15 : 6;
+            const measurePointSize = isMobile ? 20 : 8;
+            const pointNumberFontSize = isMobile ? 18 : 12;
+
             // Draw calibration line
             if (calibrationPoints.length === 2) {
                 ctx.strokeStyle = '#0066ff';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = isMobile ? 5 : 3;
                 ctx.beginPath();
                 ctx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
                 ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
                 ctx.stroke();
                 
-                // Draw calibration points
+                // Draw calibration points - larger on mobile
                 calibrationPoints.forEach(point => {
                     ctx.fillStyle = '#0066ff';
                     ctx.beginPath();
-                    ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                    ctx.arc(point.x, point.y, calibrationPointSize, 0, Math.PI * 2);
                     ctx.fill();
+                    
+                    // White border for visibility
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = isMobile ? 3 : 2;
+                    ctx.stroke();
                 });
             }
 
@@ -1073,7 +1091,7 @@
                 if (section.points.length === 0) return;
 
                 ctx.strokeStyle = section.color;
-                ctx.lineWidth = 3;
+                ctx.lineWidth = isMobile ? 5 : 3;
                 ctx.fillStyle = section.color;
 
                 // Draw lines - only between points that actually exist
@@ -1086,18 +1104,24 @@
                     }
                 }
 
-                // Draw points with numbers
+                // Draw points with numbers - much larger on mobile
                 section.points.forEach((point, idx) => {
                     if (point) {
                         ctx.fillStyle = section.color;
                         ctx.beginPath();
-                        ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                        ctx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
                         ctx.fill();
                         
+                        // White border for visibility
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = isMobile ? 3 : 2;
+                        ctx.stroke();
+                        
                         ctx.fillStyle = 'white';
-                        ctx.font = 'bold 12px Arial';
+                        ctx.font = `bold ${pointNumberFontSize}px Arial`;
                         ctx.textAlign = 'center';
-                        ctx.fillText((idx + 1).toString(), point.x, point.y + 4);
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText((idx + 1).toString(), point.x, point.y);
                     }
                 });
             });
@@ -1109,20 +1133,23 @@
                 // Clear delete areas for this section
                 section.deleteAreas = [];
 
+                // Larger labels and buttons on mobile
+                const labelFontSize = isMobile ? 14 : 11;
+                const xButtonSize = isMobile ? 24 : 16;
+                const boxHeight = isMobile ? 24 : 16;
+
                 for (let i = 0; i < section.points.length - 1; i++) {
                     if (section.lengths[i] && section.points[i] && section.points[i + 1]) {
                         const midX = (section.points[i].x + section.points[i + 1].x) / 2;
                         const midY = (section.points[i].y + section.points[i + 1].y) / 2;
                         
                         const labelText = section.lengths[i].toFixed(1) + ' ft';
-                        ctx.font = 'bold 11px Arial';
+                        ctx.font = `bold ${labelFontSize}px Arial`;
                         const textWidth = ctx.measureText(labelText).width;
                         
                         // Draw white background with rounded corners
-                        const padding = 4;
-                        const xButtonSize = 16;
+                        const padding = isMobile ? 6 : 4;
                         const boxWidth = textWidth + padding * 2 + xButtonSize + 4;
-                        const boxHeight = 16;
                         
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                         ctx.beginPath();
@@ -1135,32 +1162,34 @@
                         ctx.textBaseline = 'middle';
                         ctx.fillText(labelText, midX - xButtonSize/2 - 2, midY);
                         
-                        // Draw X button
+                        // Draw X button - larger on mobile
                         const xButtonX = midX + boxWidth/2 - xButtonSize/2 - 2;
                         const xButtonY = midY - xButtonSize/2;
                         
                         // Red circle background
                         ctx.fillStyle = '#dc3545';
                         ctx.beginPath();
-                        ctx.arc(xButtonX + xButtonSize/2, xButtonY + xButtonSize/2, 7, 0, Math.PI * 2);
+                        const circleRadius = isMobile ? 11 : 7;
+                        ctx.arc(xButtonX + xButtonSize/2, xButtonY + xButtonSize/2, circleRadius, 0, Math.PI * 2);
                         ctx.fill();
                         
                         // White X
                         ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 2;
+                        ctx.lineWidth = isMobile ? 3 : 2;
+                        const xOffset = isMobile ? 6 : 4;
                         ctx.beginPath();
-                        ctx.moveTo(xButtonX + 4, xButtonY + 4);
-                        ctx.lineTo(xButtonX + xButtonSize - 4, xButtonY + xButtonSize - 4);
-                        ctx.moveTo(xButtonX + xButtonSize - 4, xButtonY + 4);
-                        ctx.lineTo(xButtonX + 4, xButtonY + xButtonSize - 4);
+                        ctx.moveTo(xButtonX + xOffset, xButtonY + xOffset);
+                        ctx.lineTo(xButtonX + xButtonSize - xOffset, xButtonY + xButtonSize - xOffset);
+                        ctx.moveTo(xButtonX + xButtonSize - xOffset, xButtonY + xOffset);
+                        ctx.lineTo(xButtonX + xOffset, xButtonY + xButtonSize - xOffset);
                         ctx.stroke();
                         
-                        // Store the clickable area for this segment
+                        // Store the clickable area for this segment - larger hit area on mobile
                         section.deleteAreas[i] = {
-                            x: xButtonX,
-                            y: xButtonY,
-                            width: xButtonSize,
-                            height: xButtonSize,
+                            x: xButtonX - (isMobile ? 5 : 0),
+                            y: xButtonY - (isMobile ? 5 : 0),
+                            width: xButtonSize + (isMobile ? 10 : 0),
+                            height: xButtonSize + (isMobile ? 10 : 0),
                             pointIndex: i
                         };
                     }
@@ -1212,13 +1241,16 @@
                 }
                 
                 // Check if clicking near an existing point (to avoid accidental new points)
+                const isMobile = window.innerWidth < 768;
+                const detectionRadius = isMobile ? 30 : 12;
+                
                 for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
                     const section = sections[sectionIdx];
                     for (let pointIdx = 0; pointIdx < section.points.length; pointIdx++) {
                         const point = section.points[pointIdx];
                         const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
                         
-                        if (distance <= 12) {
+                        if (distance <= detectionRadius) {
                             // Clicking on existing point, don't add new one
                             return;
                         }
