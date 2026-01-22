@@ -680,6 +680,31 @@
                     <div class="measurements-list" id="measurementsList"></div>
                 </div>
 
+                <!-- Step 2: Instructions -->
+                <div class="section" id="instructionsSection" style="display: none; background: #e8f5e9; border: 2px solid #4caf50;">
+                    <h2>📍 Step 3: Add Measurement Points</h2>
+                    <div style="line-height: 1.8;">
+                        <p style="margin-bottom: 10px;"><strong>How to measure your roofline:</strong></p>
+                        <ol style="margin-left: 20px; margin-bottom: 15px;">
+                            <li>Click along the roofline where you want lights installed</li>
+                            <li>Each click adds a numbered point</li>
+                            <li>Points automatically connect with lines</li>
+                            <li>Distance in feet shows on each segment</li>
+                        </ol>
+                        
+                        <p style="margin-bottom: 10px;"><strong>Tips:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 15px;">
+                            <li><strong>Move a point:</strong> Click and drag any numbered point</li>
+                            <li><strong>Delete a segment:</strong> Click the ❌ next to the footage label</li>
+                            <li><strong>New section:</strong> Click "Start New Section" for different roof levels</li>
+                            <li><strong>Zoom:</strong> Use + and - buttons to zoom in/out</li>
+                            <li><strong>Undo/Redo:</strong> Made a mistake? Use the undo/redo buttons</li>
+                        </ul>
+                        
+                        <p style="color: #2c5f2d; font-weight: bold;">Start clicking on your roof to begin measuring! 🎯</p>
+                    </div>
+                </div>
+
                 <!-- Manual Measurements -->
                 <div class="section">
                     <h2>✍️ Manual Measurements</h2>
@@ -811,6 +836,7 @@
                 image.onload = function() {
                     setupCanvas();
                     document.getElementById('canvasSection').style.display = 'block';
+                    document.getElementById('instructionsSection').style.display = 'block';
                 };
                 image.src = originalImageData;
             };
@@ -821,8 +847,24 @@
             canvas = document.getElementById('measureCanvas');
             ctx = canvas.getContext('2d');
             
-            canvas.width = image.width;
-            canvas.height = image.height;
+            // Get the container width to prevent mobile zoom
+            const container = canvas.parentElement;
+            const maxWidth = container.clientWidth - 20; // Account for padding
+            
+            // Set canvas dimensions
+            if (image.width > maxWidth && window.innerWidth < 768) {
+                // Scale down image to fit mobile screen
+                const scale = maxWidth / image.width;
+                canvas.width = image.width;
+                canvas.height = image.height;
+                canvas.style.width = maxWidth + 'px';
+                canvas.style.height = (image.height * scale) + 'px';
+            } else {
+                canvas.width = image.width;
+                canvas.height = image.height;
+                canvas.style.width = '';
+                canvas.style.height = '';
+            }
             
             drawCanvas();
             
@@ -893,8 +935,10 @@
             if (!isCalibrated) return;
             
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             
             // Check if clicking on a point to drag
             for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -919,8 +963,10 @@
                 // Update cursor when hovering over points
                 if (isCalibrated) {
                     const rect = canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-                    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    const x = (e.clientX - rect.left) * scaleX;
+                    const y = (e.clientY - rect.top) * scaleY;
                     
                     let overPoint = false;
                     for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -944,8 +990,10 @@
             e.preventDefault();
             
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             
             // Update point position
             const section = sections[draggingPoint.sectionIdx];
@@ -1118,8 +1166,10 @@
             // Don't process click if we just finished dragging
             if (dragStartPos) {
                 const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-                const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
                 
                 // If mouse moved more than 5 pixels, it was a drag not a click
                 const distance = Math.sqrt((x - dragStartPos.x) ** 2 + (y - dragStartPos.y) ** 2);
@@ -1131,8 +1181,10 @@
             }
             
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
 
             // Check if clicking on an X button to delete a segment
             if (isCalibrated) {
@@ -1853,6 +1905,7 @@
                                 canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
                                 
                                 document.getElementById('canvasSection').style.display = 'block';
+                                document.getElementById('instructionsSection').style.display = 'block';
                                 
                                 // Draw everything fresh
                                 drawCanvas();
