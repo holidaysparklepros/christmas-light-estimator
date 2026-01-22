@@ -630,10 +630,13 @@
             <div class="left-panel">
                 <!-- Image Upload Section -->
                 <div class="section">
-                    <h2>📷 Step 1: Upload Roof Photo</h2>
+                    <h2>📷 Step 1: Upload Photo</h2>
+                    <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">
+                        Upload a full photo of the house with the roof clearly visible. Include the entire structure you want to measure for best results.
+                    </p>
                     <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
                         <input type="file" id="imageUpload" accept="image/*">
-                        <p style="font-size: 1.2em; color: #2c5f2d; font-weight: 600;">Click to upload roof image</p>
+                        <p style="font-size: 1.2em; color: #2c5f2d; font-weight: 600;">Click to upload image</p>
                         <p style="color: #666; margin-top: 10px;">Supports JPG, PNG, WEBP</p>
                     </div>
                 </div>
@@ -901,15 +904,21 @@
             canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         }
 
-        // Touch event handlers
+        // Touch event handlers with improved coordinate handling
         let lastTouchTime = 0;
+        let lastTapLocation = null;
 
         function handleTouchStart(e) {
             e.preventDefault();
             const touch = e.touches[0];
+            
+            // Store tap location for debugging
+            lastTapLocation = { x: touch.clientX, y: touch.clientY };
+            
             const mouseEvent = new MouseEvent('mousedown', {
                 clientX: touch.clientX,
-                clientY: touch.clientY
+                clientY: touch.clientY,
+                bubbles: true
             });
             canvas.dispatchEvent(mouseEvent);
         }
@@ -919,7 +928,8 @@
             const touch = e.touches[0];
             const mouseEvent = new MouseEvent('mousemove', {
                 clientX: touch.clientX,
-                clientY: touch.clientY
+                clientY: touch.clientY,
+                bubbles: true
             });
             canvas.dispatchEvent(mouseEvent);
         }
@@ -927,25 +937,41 @@
         function handleTouchEnd(e) {
             e.preventDefault();
             
-            // Handle tap as click
+            // Handle tap as click with proper timing
             const now = Date.now();
             const timeSinceLastTouch = now - lastTouchTime;
             
-            if (timeSinceLastTouch < 300 && e.changedTouches.length > 0) {
+            if (e.changedTouches.length > 0) {
                 const touch = e.changedTouches[0];
-                const mouseEvent = new MouseEvent('click', {
+                
+                // Always trigger click for taps (not drags)
+                if (lastTapLocation) {
+                    const distance = Math.sqrt(
+                        Math.pow(touch.clientX - lastTapLocation.x, 2) + 
+                        Math.pow(touch.clientY - lastTapLocation.y, 2)
+                    );
+                    
+                    // If didn't move much, it's a tap
+                    if (distance < 10) {
+                        const clickEvent = new MouseEvent('click', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        canvas.dispatchEvent(clickEvent);
+                    }
+                }
+                
+                const mouseUpEvent = new MouseEvent('mouseup', {
                     clientX: touch.clientX,
                     clientY: touch.clientY,
                     bubbles: true
                 });
-                canvas.dispatchEvent(mouseEvent);
+                canvas.dispatchEvent(mouseUpEvent);
             }
             
-            const mouseEvent = new MouseEvent('mouseup', {
-                bubbles: true
-            });
-            canvas.dispatchEvent(mouseEvent);
-            
+            lastTapLocation = null;
             lastTouchTime = now;
         }
 
@@ -961,9 +987,9 @@
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
             
-            // Larger detection radius on mobile to match larger points
+            // Much larger detection radius on mobile to match huge points
             const isMobile = window.innerWidth < 768;
-            const detectionRadius = isMobile ? 50 : 12;
+            const detectionRadius = isMobile ? 80 : 12;
             
             // Check if clicking on a point to drag
             for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -994,7 +1020,7 @@
                     const y = (e.clientY - rect.top) * scaleY;
                     
                     const isMobile = window.innerWidth < 768;
-                    const detectionRadius = isMobile ? 50 : 12;
+                    const detectionRadius = isMobile ? 80 : 12;
                     
                     let overPoint = false;
                     for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -1072,12 +1098,12 @@
             // Redraw the base image
             ctx.drawImage(image, 0, 0);
 
-            // Calculate point size based on viewport (MUCH larger on mobile)
+            // Calculate point size based on viewport (EXTREMELY large on mobile for visibility)
             const isMobile = window.innerWidth < 768;
-            const calibrationPointSize = isMobile ? 25 : 6;
-            const measurePointSize = isMobile ? 30 : 8;
-            const pointNumberFontSize = isMobile ? 24 : 12;
-            const lineWidth = isMobile ? 8 : 3;
+            const calibrationPointSize = isMobile ? 40 : 6;
+            const measurePointSize = isMobile ? 50 : 8;
+            const pointNumberFontSize = isMobile ? 32 : 12;
+            const lineWidth = isMobile ? 12 : 3;
 
             // Draw calibration line
             if (calibrationPoints.length === 2) {
@@ -1088,12 +1114,12 @@
                 ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
                 ctx.stroke();
                 
-                // Draw calibration points - MUCH larger on mobile
+                // Draw calibration points - EXTREMELY large on mobile
                 calibrationPoints.forEach(point => {
-                    // Yellow background for high visibility
+                    // Bright yellow background for ultra-high visibility
                     ctx.fillStyle = '#ffff00';
                     ctx.beginPath();
-                    ctx.arc(point.x, point.y, calibrationPointSize + 5, 0, Math.PI * 2);
+                    ctx.arc(point.x, point.y, calibrationPointSize + 10, 0, Math.PI * 2);
                     ctx.fill();
                     
                     ctx.fillStyle = '#0066ff';
@@ -1101,9 +1127,9 @@
                     ctx.arc(point.x, point.y, calibrationPointSize, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // White border for visibility
+                    // Thick white border for visibility
                     ctx.strokeStyle = 'white';
-                    ctx.lineWidth = isMobile ? 4 : 2;
+                    ctx.lineWidth = isMobile ? 6 : 2;
                     ctx.stroke();
                 });
             }
@@ -1116,7 +1142,7 @@
                 ctx.lineWidth = lineWidth;
                 ctx.fillStyle = section.color;
 
-                // Draw lines - THICKER on mobile
+                // Draw lines - VERY THICK on mobile
                 for (let i = 0; i < section.points.length - 1; i++) {
                     if (section.points[i] && section.points[i + 1]) {
                         ctx.beginPath();
@@ -1126,13 +1152,13 @@
                     }
                 }
 
-                // Draw points with numbers - MUCH larger on mobile
+                // Draw points with numbers - EXTREMELY large on mobile
                 section.points.forEach((point, idx) => {
                     if (point) {
-                        // Yellow outer glow for visibility
+                        // Bright yellow outer glow for ultra-visibility
                         ctx.fillStyle = '#ffff00';
                         ctx.beginPath();
-                        ctx.arc(point.x, point.y, measurePointSize + 5, 0, Math.PI * 2);
+                        ctx.arc(point.x, point.y, measurePointSize + 10, 0, Math.PI * 2);
                         ctx.fill();
                         
                         ctx.fillStyle = section.color;
@@ -1140,15 +1166,20 @@
                         ctx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
                         ctx.fill();
                         
-                        // White border for visibility
+                        // Thick white border for visibility
                         ctx.strokeStyle = 'white';
-                        ctx.lineWidth = isMobile ? 4 : 2;
+                        ctx.lineWidth = isMobile ? 6 : 2;
                         ctx.stroke();
                         
-                        ctx.fillStyle = 'white';
+                        // Black text outline for better visibility
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = isMobile ? 3 : 1;
                         ctx.font = `bold ${pointNumberFontSize}px Arial`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
+                        ctx.strokeText((idx + 1).toString(), point.x, point.y);
+                        
+                        ctx.fillStyle = 'white';
                         ctx.fillText((idx + 1).toString(), point.x, point.y);
                     }
                 });
@@ -1270,7 +1301,7 @@
                 
                 // Check if clicking near an existing point (to avoid accidental new points)
                 const isMobile = window.innerWidth < 768;
-                const detectionRadius = isMobile ? 50 : 12;
+                const detectionRadius = isMobile ? 80 : 12;
                 
                 for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
                     const section = sections[sectionIdx];
@@ -1604,6 +1635,8 @@
                         <option value="24" ${wreath.size === '24' ? 'selected' : ''}>24 inch</option>
                         <option value="36" ${wreath.size === '36' ? 'selected' : ''}>36 inch</option>
                         <option value="48" ${wreath.size === '48' ? 'selected' : ''}>48 inch</option>
+                        <option value="60" ${wreath.size === '60' ? 'selected' : ''}>60 inch</option>
+                        <option value="72" ${wreath.size === '72' ? 'selected' : ''}>72 inch</option>
                     </select>
                     <label>Quantity:</label>
                     <input type="number" value="${wreath.quantity}" min="1" 
