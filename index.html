@@ -642,6 +642,34 @@
                 <div class="section" id="canvasSection" style="display: none;">
                     <h2>📏 Calibrate & Measure</h2>
                     
+                    <!-- Collapsible Instructions -->
+                    <div id="instructionsCollapsible" style="display: none; margin-bottom: 15px;">
+                        <button onclick="toggleInstructions()" style="width: 100%; text-align: left; background: #e8f5e9; border: 2px solid #4caf50; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #2c5f2d; display: flex; justify-content: space-between; align-items: center;">
+                            <span>ℹ️ How to Add Measurement Points</span>
+                            <span id="instructionsToggle">▼</span>
+                        </button>
+                        <div id="instructionsContent" style="display: none; background: #f0f8f0; border: 2px solid #4caf50; border-top: none; padding: 15px; border-radius: 0 0 8px 8px; line-height: 1.8;">
+                            <p style="margin-bottom: 10px;"><strong>How to measure your roofline:</strong></p>
+                            <ol style="margin-left: 20px; margin-bottom: 15px;">
+                                <li>Click along the roofline where you want lights installed</li>
+                                <li>Each click adds a numbered point</li>
+                                <li>Points automatically connect with lines</li>
+                                <li>Distance in feet shows on each segment</li>
+                            </ol>
+                            
+                            <p style="margin-bottom: 10px;"><strong>Tips:</strong></p>
+                            <ul style="margin-left: 20px; margin-bottom: 15px;">
+                                <li><strong>Move a point:</strong> Click and drag any numbered point</li>
+                                <li><strong>Delete a segment:</strong> Click the ❌ next to the footage label</li>
+                                <li><strong>New section:</strong> Click "Start New Section" for different roof levels</li>
+                                <li><strong>Zoom:</strong> Use + and - buttons to zoom in/out</li>
+                                <li><strong>Undo/Redo:</strong> Made a mistake? Use the undo/redo buttons</li>
+                            </ul>
+                            
+                            <p style="color: #2c5f2d; font-weight: bold;">Start clicking on your roof to begin measuring! 🎯</p>
+                        </div>
+                    </div>
+                    
                     <div id="calibrationStatus" class="status info">
                         Click two points on a known distance (door, window, etc.)
                     </div>
@@ -697,31 +725,6 @@
                     </div>
 
                     <div class="measurements-list" id="measurementsList"></div>
-                </div>
-
-                <!-- Step 2: Instructions -->
-                <div class="section" id="instructionsSection" style="display: none; background: #e8f5e9; border: 2px solid #4caf50;">
-                    <h2>📍 Step 3: Add Measurement Points</h2>
-                    <div style="line-height: 1.8;">
-                        <p style="margin-bottom: 10px;"><strong>How to measure your roofline:</strong></p>
-                        <ol style="margin-left: 20px; margin-bottom: 15px;">
-                            <li>Click along the roofline where you want lights installed</li>
-                            <li>Each click adds a numbered point</li>
-                            <li>Points automatically connect with lines</li>
-                            <li>Distance in feet shows on each segment</li>
-                        </ol>
-                        
-                        <p style="margin-bottom: 10px;"><strong>Tips:</strong></p>
-                        <ul style="margin-left: 20px; margin-bottom: 15px;">
-                            <li><strong>Move a point:</strong> Click and drag any numbered point</li>
-                            <li><strong>Delete a segment:</strong> Click the ❌ next to the footage label</li>
-                            <li><strong>New section:</strong> Click "Start New Section" for different roof levels</li>
-                            <li><strong>Zoom:</strong> Use + and - buttons to zoom in/out</li>
-                            <li><strong>Undo/Redo:</strong> Made a mistake? Use the undo/redo buttons</li>
-                        </ul>
-                        
-                        <p style="color: #2c5f2d; font-weight: bold;">Start clicking on your roof to begin measuring! 🎯</p>
-                    </div>
                 </div>
 
                 <!-- Manual Measurements -->
@@ -855,11 +858,23 @@
                 image.onload = function() {
                     setupCanvas();
                     document.getElementById('canvasSection').style.display = 'block';
-                    document.getElementById('instructionsSection').style.display = 'block';
+                    document.getElementById('instructionsCollapsible').style.display = 'block';
                 };
                 image.src = originalImageData;
             };
             reader.readAsDataURL(file);
+        }
+
+        function toggleInstructions() {
+            const content = document.getElementById('instructionsContent');
+            const toggle = document.getElementById('instructionsToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
         }
 
         function setupCanvas() {
@@ -946,9 +961,9 @@
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
             
-            // Larger detection radius on mobile
+            // Larger detection radius on mobile to match larger points
             const isMobile = window.innerWidth < 768;
-            const detectionRadius = isMobile ? 30 : 12;
+            const detectionRadius = isMobile ? 50 : 12;
             
             // Check if clicking on a point to drag
             for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -979,7 +994,7 @@
                     const y = (e.clientY - rect.top) * scaleY;
                     
                     const isMobile = window.innerWidth < 768;
-                    const detectionRadius = isMobile ? 30 : 12;
+                    const detectionRadius = isMobile ? 50 : 12;
                     
                     let overPoint = false;
                     for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -1057,23 +1072,30 @@
             // Redraw the base image
             ctx.drawImage(image, 0, 0);
 
-            // Calculate point size based on viewport (larger on mobile)
+            // Calculate point size based on viewport (MUCH larger on mobile)
             const isMobile = window.innerWidth < 768;
-            const calibrationPointSize = isMobile ? 15 : 6;
-            const measurePointSize = isMobile ? 20 : 8;
-            const pointNumberFontSize = isMobile ? 18 : 12;
+            const calibrationPointSize = isMobile ? 25 : 6;
+            const measurePointSize = isMobile ? 30 : 8;
+            const pointNumberFontSize = isMobile ? 24 : 12;
+            const lineWidth = isMobile ? 8 : 3;
 
             // Draw calibration line
             if (calibrationPoints.length === 2) {
                 ctx.strokeStyle = '#0066ff';
-                ctx.lineWidth = isMobile ? 5 : 3;
+                ctx.lineWidth = lineWidth;
                 ctx.beginPath();
                 ctx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
                 ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
                 ctx.stroke();
                 
-                // Draw calibration points - larger on mobile
+                // Draw calibration points - MUCH larger on mobile
                 calibrationPoints.forEach(point => {
+                    // Yellow background for high visibility
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, calibrationPointSize + 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
                     ctx.fillStyle = '#0066ff';
                     ctx.beginPath();
                     ctx.arc(point.x, point.y, calibrationPointSize, 0, Math.PI * 2);
@@ -1081,7 +1103,7 @@
                     
                     // White border for visibility
                     ctx.strokeStyle = 'white';
-                    ctx.lineWidth = isMobile ? 3 : 2;
+                    ctx.lineWidth = isMobile ? 4 : 2;
                     ctx.stroke();
                 });
             }
@@ -1091,10 +1113,10 @@
                 if (section.points.length === 0) return;
 
                 ctx.strokeStyle = section.color;
-                ctx.lineWidth = isMobile ? 5 : 3;
+                ctx.lineWidth = lineWidth;
                 ctx.fillStyle = section.color;
 
-                // Draw lines - only between points that actually exist
+                // Draw lines - THICKER on mobile
                 for (let i = 0; i < section.points.length - 1; i++) {
                     if (section.points[i] && section.points[i + 1]) {
                         ctx.beginPath();
@@ -1104,9 +1126,15 @@
                     }
                 }
 
-                // Draw points with numbers - much larger on mobile
+                // Draw points with numbers - MUCH larger on mobile
                 section.points.forEach((point, idx) => {
                     if (point) {
+                        // Yellow outer glow for visibility
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, measurePointSize + 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        
                         ctx.fillStyle = section.color;
                         ctx.beginPath();
                         ctx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
@@ -1114,7 +1142,7 @@
                         
                         // White border for visibility
                         ctx.strokeStyle = 'white';
-                        ctx.lineWidth = isMobile ? 3 : 2;
+                        ctx.lineWidth = isMobile ? 4 : 2;
                         ctx.stroke();
                         
                         ctx.fillStyle = 'white';
@@ -1242,7 +1270,7 @@
                 
                 // Check if clicking near an existing point (to avoid accidental new points)
                 const isMobile = window.innerWidth < 768;
-                const detectionRadius = isMobile ? 30 : 12;
+                const detectionRadius = isMobile ? 50 : 12;
                 
                 for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
                     const section = sections[sectionIdx];
@@ -1943,7 +1971,7 @@
                                 canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
                                 
                                 document.getElementById('canvasSection').style.display = 'block';
-                                document.getElementById('instructionsSection').style.display = 'block';
+                                document.getElementById('instructionsCollapsible').style.display = 'block';
                                 
                                 // Draw everything fresh
                                 drawCanvas();
