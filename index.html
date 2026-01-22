@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Christmas Light Estimation Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -413,6 +413,172 @@
             border-radius: 3px;
             border: 2px solid #333;
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .estimate-box {
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            .customer-info {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .controls button {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+
+            .pricing-input {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .pricing-input input {
+                width: 60px;
+            }
+
+            .legend {
+                gap: 8px;
+            }
+
+            .legend-item {
+                font-size: 0.9em;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .section h2 {
+                font-size: 1.3em;
+            }
+
+            .canvas-container {
+                max-height: 400px;
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #measureCanvas {
+                max-width: 100%;
+                height: auto;
+            }
+
+            .zoom-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.8em;
+            }
+
+            .estimate-box {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            .estimate-box h2 {
+                font-size: 1.5em;
+            }
+
+            .estimate-total .total-value {
+                font-size: 2em;
+            }
+
+            button {
+                padding: 14px 20px;
+                font-size: 1em;
+                min-height: 44px; /* Touch-friendly */
+            }
+
+            .input-group input {
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .subtitle {
+                font-size: 0.9em;
+            }
+
+            .section h2 {
+                font-size: 1.2em;
+            }
+
+            .estimate-total .total-value {
+                font-size: 1.8em;
+            }
+
+            .wreath-entry input, 
+            .wreath-entry select,
+            .manual-measurement input {
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+
+            .zoom-controls {
+                top: 5px;
+                right: 5px;
+            }
+
+            .zoom-btn {
+                width: 45px;
+                height: 45px;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            /* This targets touch devices */
+            button {
+                min-height: 48px;
+                padding: 16px 24px;
+            }
+
+            .measurement-item {
+                padding: 12px;
+            }
+
+            .remove-btn {
+                min-height: 40px;
+                padding: 8px 12px;
+            }
+
+            #measureCanvas {
+                touch-action: none; /* Prevent default touch behaviors */
+            }
+        }
     </style>
 </head>
 <body>
@@ -660,10 +826,64 @@
             
             drawCanvas();
             
+            // Mouse events
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mousemove', handleMouseMove);
             canvas.addEventListener('mouseup', handleMouseUp);
             canvas.addEventListener('click', handleCanvasClick);
+            
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
+
+        // Touch event handlers
+        let lastTouchTime = 0;
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            
+            // Handle tap as click
+            const now = Date.now();
+            const timeSinceLastTouch = now - lastTouchTime;
+            
+            if (timeSinceLastTouch < 300 && e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                const mouseEvent = new MouseEvent('click', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    bubbles: true
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            const mouseEvent = new MouseEvent('mouseup', {
+                bubbles: true
+            });
+            canvas.dispatchEvent(mouseEvent);
+            
+            lastTouchTime = now;
         }
 
         let draggingPoint = null;
@@ -1626,6 +1846,11 @@
                                 canvas.addEventListener('mousemove', handleMouseMove);
                                 canvas.addEventListener('mouseup', handleMouseUp);
                                 canvas.addEventListener('click', handleCanvasClick);
+                                
+                                // Touch events for mobile
+                                canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+                                canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+                                canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
                                 
                                 document.getElementById('canvasSection').style.display = 'block';
                                 
