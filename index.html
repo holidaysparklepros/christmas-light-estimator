@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Christmas Light Estimation Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -10,6 +12,10 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         body {
@@ -17,6 +23,8 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            overflow-x: hidden;
+            width: 100%;
         }
 
         .container {
@@ -26,6 +34,7 @@
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 30px;
+            overflow: hidden;
         }
 
         h1 {
@@ -129,11 +138,15 @@
             border: 2px solid #ddd;
             border-radius: 10px;
             background: #fff;
+            width: 100%;
+            max-width: 100%;
         }
 
         #measureCanvas {
             cursor: crosshair;
             display: block;
+            max-width: 100%;
+            height: auto;
         }
 
         .controls {
@@ -492,6 +505,12 @@
             #measureCanvas {
                 max-width: 100%;
                 height: auto;
+                width: 100%;
+                object-fit: contain;
+            }
+
+            .section {
+                overflow: hidden;
             }
 
             .zoom-btn {
@@ -847,24 +866,11 @@
             canvas = document.getElementById('measureCanvas');
             ctx = canvas.getContext('2d');
             
-            // Get the container width to prevent mobile zoom
-            const container = canvas.parentElement;
-            const maxWidth = container.clientWidth - 20; // Account for padding
+            // Set canvas to actual image dimensions
+            canvas.width = image.width;
+            canvas.height = image.height;
             
-            // Set canvas dimensions
-            if (image.width > maxWidth && window.innerWidth < 768) {
-                // Scale down image to fit mobile screen
-                const scale = maxWidth / image.width;
-                canvas.width = image.width;
-                canvas.height = image.height;
-                canvas.style.width = maxWidth + 'px';
-                canvas.style.height = (image.height * scale) + 'px';
-            } else {
-                canvas.width = image.width;
-                canvas.height = image.height;
-                canvas.style.width = '';
-                canvas.style.height = '';
-            }
+            // CSS will automatically scale it to fit container
             
             drawCanvas();
             
