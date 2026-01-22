@@ -692,31 +692,8 @@
                         <canvas id="measureCanvas"></canvas>
                     </div>
 
-                    <div class="legend">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ff0000;"></div>
-                            <span>Section 1</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ff8800;"></div>
-                            <span>Section 2</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #00cc00;"></div>
-                            <span>Section 3</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #0066ff;"></div>
-                            <span>Section 4</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #cc00cc;"></div>
-                            <span>Section 5</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ff66cc;"></div>
-                            <span>Section 6</span>
-                        </div>
+                    <div class="legend" id="sectionLegend">
+                        <!-- Legend will be dynamically populated -->
                     </div>
 
                     <div class="controls">
@@ -725,6 +702,9 @@
                         <button class="btn-warning" onclick="redoPoint()">↷ Redo Point</button>
                         <button class="btn-secondary" onclick="clearAll()">Clear All</button>
                         <button class="btn-primary" onclick="saveProject()" style="background: #17a2b8;">💾 Save Project</button>
+                        <button id="mobileModeBtn" class="btn-secondary" onclick="toggleMobileMode()" style="background: #6c757d;">
+                            📱 Enable Mobile Mode
+                        </button>
                     </div>
 
                     <div class="measurements-list" id="measurementsList"></div>
@@ -834,18 +814,47 @@
         let history = [];
         let historyIndex = -1;
         
-        let sections = [
-            { color: '#ff0000', name: 'Section 1', points: [], lengths: [] },
-            { color: '#ff8800', name: 'Section 2', points: [], lengths: [] },
-            { color: '#00cc00', name: 'Section 3', points: [], lengths: [] },
-            { color: '#0066ff', name: 'Section 4', points: [], lengths: [] },
-            { color: '#cc00cc', name: 'Section 5', points: [], lengths: [] },
-            { color: '#ff66cc', name: 'Section 6', points: [], lengths: [] }
-        ];
+        // Mobile mode override
+        let forceMobileMode = false;
+        
+        let sections = [];
         
         let currentSectionIndex = 0;
         let manualMeasurements = [];
         let wreaths = [];
+
+        // Color palette for sections - will cycle through these
+        const sectionColors = [
+            '#ff0000', // red
+            '#ff8800', // orange
+            '#00cc00', // green
+            '#0066ff', // blue
+            '#cc00cc', // purple
+            '#ff66cc', // pink
+            '#00cccc', // cyan
+            '#ffcc00', // yellow
+            '#cc0000', // dark red
+            '#0088ff', // light blue
+            '#ff0066', // hot pink
+            '#66cc00', // lime
+            '#9900cc', // violet
+            '#ff6600', // orange-red
+            '#00cc66', // teal
+            '#cc6600'  // brown
+        ];
+
+        // Initialize with first section
+        function initializeFirstSection() {
+            if (sections.length === 0) {
+                sections.push({
+                    color: sectionColors[0],
+                    name: 'Section 1',
+                    points: [],
+                    lengths: [],
+                    deleteAreas: []
+                });
+            }
+        }
 
         // Initialize
         document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
@@ -880,6 +889,20 @@
             }
         }
 
+        function toggleMobileMode() {
+            forceMobileMode = !forceMobileMode;
+            const btn = document.getElementById('mobileModeBtn');
+            if (forceMobileMode) {
+                btn.textContent = '🖥️ Disable Mobile Mode';
+                btn.style.background = '#28a745';
+            } else {
+                btn.textContent = '📱 Enable Mobile Mode';
+                btn.style.background = '#6c757d';
+            }
+            // Redraw with new point sizes
+            drawCanvas();
+        }
+
         function setupCanvas() {
             canvas = document.getElementById('measureCanvas');
             ctx = canvas.getContext('2d');
@@ -889,6 +912,9 @@
             canvas.height = image.height;
             
             // CSS will automatically scale it to fit container
+            
+            // Initialize first section if needed
+            initializeFirstSection();
             
             drawCanvas();
             
@@ -988,7 +1014,7 @@
             const y = (e.clientY - rect.top) * scaleY;
             
             // Much larger detection radius on mobile to match huge points
-            const isMobile = window.innerWidth < 768;
+            const isMobile = forceMobileMode || window.innerWidth < 768;
             const detectionRadius = isMobile ? 80 : 12;
             
             // Check if clicking on a point to drag
@@ -1019,7 +1045,7 @@
                     const x = (e.clientX - rect.left) * scaleX;
                     const y = (e.clientY - rect.top) * scaleY;
                     
-                    const isMobile = window.innerWidth < 768;
+                    const isMobile = forceMobileMode || window.innerWidth < 768;
                     const detectionRadius = isMobile ? 80 : 12;
                     
                     let overPoint = false;
@@ -1099,7 +1125,7 @@
             ctx.drawImage(image, 0, 0);
 
             // Calculate point size based on viewport (EXTREMELY large on mobile for visibility)
-            const isMobile = window.innerWidth < 768;
+            const isMobile = forceMobileMode || window.innerWidth < 768;
             const calibrationPointSize = isMobile ? 40 : 6;
             const measurePointSize = isMobile ? 50 : 8;
             const pointNumberFontSize = isMobile ? 32 : 12;
@@ -1114,13 +1140,15 @@
                 ctx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
                 ctx.stroke();
                 
-                // Draw calibration points - EXTREMELY large on mobile
+                // Draw calibration points
                 calibrationPoints.forEach(point => {
-                    // Bright yellow background for ultra-high visibility
-                    ctx.fillStyle = '#ffff00';
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, calibrationPointSize + 10, 0, Math.PI * 2);
-                    ctx.fill();
+                    // Yellow halo ONLY on mobile
+                    if (isMobile) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, calibrationPointSize + 10, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                     
                     ctx.fillStyle = '#0066ff';
                     ctx.beginPath();
@@ -1152,14 +1180,16 @@
                     }
                 }
 
-                // Draw points with numbers - EXTREMELY large on mobile
+                // Draw points with numbers
                 section.points.forEach((point, idx) => {
                     if (point) {
-                        // Bright yellow outer glow for ultra-visibility
-                        ctx.fillStyle = '#ffff00';
-                        ctx.beginPath();
-                        ctx.arc(point.x, point.y, measurePointSize + 10, 0, Math.PI * 2);
-                        ctx.fill();
+                        // Yellow halo ONLY on mobile
+                        if (isMobile) {
+                            ctx.fillStyle = '#ffff00';
+                            ctx.beginPath();
+                            ctx.arc(point.x, point.y, measurePointSize + 10, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
                         
                         ctx.fillStyle = section.color;
                         ctx.beginPath();
@@ -1171,15 +1201,20 @@
                         ctx.lineWidth = isMobile ? 6 : 2;
                         ctx.stroke();
                         
-                        // Black text outline for better visibility
-                        ctx.strokeStyle = 'black';
-                        ctx.lineWidth = isMobile ? 3 : 1;
+                        // Black text outline for better visibility on mobile
+                        if (isMobile) {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 3;
+                            ctx.font = `bold ${pointNumberFontSize}px Arial`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.strokeText((idx + 1).toString(), point.x, point.y);
+                        }
+                        
+                        ctx.fillStyle = 'white';
                         ctx.font = `bold ${pointNumberFontSize}px Arial`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.strokeText((idx + 1).toString(), point.x, point.y);
-                        
-                        ctx.fillStyle = 'white';
                         ctx.fillText((idx + 1).toString(), point.x, point.y);
                     }
                 });
@@ -1300,7 +1335,7 @@
                 }
                 
                 // Check if clicking near an existing point (to avoid accidental new points)
-                const isMobile = window.innerWidth < 768;
+                const isMobile = forceMobileMode || window.innerWidth < 768;
                 const detectionRadius = isMobile ? 80 : 12;
                 
                 for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -1416,14 +1451,22 @@
                 return;
             }
             
-            currentSectionIndex++;
-            if (currentSectionIndex >= sections.length) {
-                alert('Maximum 6 sections reached!');
-                currentSectionIndex = sections.length - 1;
-                return;
-            }
+            // Create a new section
+            const nextIndex = sections.length;
+            const colorIndex = nextIndex % sectionColors.length; // Cycle through colors
+            
+            sections.push({
+                color: sectionColors[colorIndex],
+                name: `Section ${nextIndex + 1}`,
+                points: [],
+                lengths: [],
+                deleteAreas: []
+            });
+            
+            currentSectionIndex = nextIndex;
             
             updateMeasurementsList();
+            alert(`Started Section ${nextIndex + 1}! Click on the image to add measurement points.`);
         }
 
         function saveState() {
@@ -1538,6 +1581,9 @@
             const list = document.getElementById('measurementsList');
             list.innerHTML = '';
             
+            // Update legend dynamically
+            updateLegend();
+            
             sections.forEach((section, idx) => {
                 if (section.points.length > 0) {
                     const total = section.lengths.reduce((sum, len) => sum + len, 0);
@@ -1553,6 +1599,23 @@
                     `;
                     list.appendChild(div);
                 }
+            });
+        }
+
+        function updateLegend() {
+            const legend = document.getElementById('sectionLegend');
+            if (!legend) return;
+            
+            legend.innerHTML = '';
+            
+            sections.forEach((section, idx) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${section.color};"></div>
+                    <span>${section.name}</span>
+                `;
+                legend.appendChild(item);
             });
         }
 
