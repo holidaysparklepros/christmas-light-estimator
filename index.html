@@ -2389,8 +2389,8 @@
                 if (logoData) {
                     const logoImg = new Image();
                     logoImg.src = logoData;
-                    const logoMaxWidth = 60;  // Reduced from 80
-                    const logoMaxHeight = 45; // Reduced from 60
+                    const logoMaxWidth = 60;
+                    const logoMaxHeight = 45;
                     let logoWidth = logoImg.width;
                     let logoHeight = logoImg.height;
                     const logoRatio = Math.min(logoMaxWidth / logoWidth, logoMaxHeight / logoHeight);
@@ -2398,8 +2398,22 @@
                     logoHeight = logoHeight * logoRatio;
                     
                     const logoX = (210 - logoWidth) / 2;
-                    // Position logo after total with some spacing, but ensure it fits on page
-                    const logoY = Math.min(yPos + 20, 260); // Max Y=260 to stay on page (A4 height ~297mm)
+                    
+                    // Check if logo will fit on current page
+                    // A4 page height in jsPDF is ~280-285 points
+                    const pageHeight = 280;
+                    const logoYPosition = yPos + 20;
+                    const logoBottomPosition = logoYPosition + logoHeight;
+                    
+                    let logoY;
+                    if (logoBottomPosition > pageHeight) {
+                        // Logo won't fit, add new page
+                        doc.addPage();
+                        logoY = 20; // Place at top of new page
+                    } else {
+                        // Logo fits on current page
+                        logoY = logoYPosition;
+                    }
                     
                     doc.addImage(logoData, 'JPEG', logoX, logoY, logoWidth, logoHeight);
                 }
