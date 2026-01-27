@@ -629,21 +629,26 @@
             <!-- Left Panel -->
             <div class="left-panel">
                 <!-- Image Upload Section -->
-                <div class="section">
-                    <h2>📷 Step 1: Upload Photo</h2>
-                    <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">
-                        Upload a full photo of the house with the roof clearly visible. Include the entire structure you want to measure for best results.
-                    </p>
-                    <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
-                        <input type="file" id="imageUpload" accept="image/*">
-                        <p style="font-size: 1.2em; color: #2c5f2d; font-weight: 600;">Click to upload image</p>
-                        <p style="color: #666; margin-top: 10px;">Supports JPG, PNG, WEBP</p>
+                <div class="section" id="uploadSection">
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleUploadSection()">
+                        <h2>📷 Step 1: Upload Photo</h2>
+                        <span id="uploadToggle" style="font-size: 1.5em; font-weight: bold;">▼</span>
+                    </div>
+                    <div id="uploadContent">
+                        <p style="color: #666; margin-bottom: 15px; line-height: 1.6;">
+                            Upload a full photo of the house with the roof clearly visible. Include the entire structure you want to measure for best results.
+                        </p>
+                        <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
+                            <input type="file" id="imageUpload" accept="image/*">
+                            <p style="font-size: 1.2em; color: #2c5f2d; font-weight: 600;">Click to upload image</p>
+                            <p style="color: #666; margin-top: 10px;">Supports JPG, PNG, WEBP</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Canvas Section -->
                 <div class="section" id="canvasSection" style="display: none;">
-                    <h2>📏 Calibrate & Measure</h2>
+                    <h2>📏 Step 2: Calibrate & Measure</h2>
                     
                     <!-- Collapsible Instructions -->
                     <div id="instructionsCollapsible" style="display: none; margin-bottom: 15px;">
@@ -694,6 +699,34 @@
 
                     <div class="legend" id="sectionLegend">
                         <!-- Legend will be dynamically populated -->
+                    </div>
+
+                    <!-- Tier Selection -->
+                    <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 15px 0; border: 2px solid #0066ff;">
+                        <h3 style="font-size: 1em; margin-bottom: 10px; color: #333;">📦 Measurement Tiers/Options</h3>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">Select which tier you're measuring for. Each tier saves separate measurements, wreaths, and wraps.</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;">
+                            <button id="tierBtn1" class="btn-primary" onclick="switchToTier(1)" style="padding: 12px; font-weight: 600; background: #28a745; border: 3px solid #28a745;">
+                                Basic (Active)
+                            </button>
+                            <button id="tierBtn2" class="btn-secondary" onclick="switchToTier(2)" style="padding: 12px; font-weight: 600;">
+                                Standard
+                            </button>
+                            <button id="tierBtn3" class="btn-secondary" onclick="switchToTier(3)" style="padding: 12px; font-weight: 600;">
+                                Premium
+                            </button>
+                        </div>
+                        
+                        <div style="background: white; padding: 10px; border-radius: 5px; border: 2px solid #ddd;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 5px;">Package Name:</label>
+                            <input type="text" id="currentTierName" value="Basic Package - Front Only" 
+                                   style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 5px;" 
+                                   onchange="updateTierName()">
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                Example: "Front Only", "Front + Sides", "Full House + Premium"
+                            </p>
+                        </div>
                     </div>
 
                     <div class="controls">
@@ -792,6 +825,37 @@
                         <div class="total-value" id="grandTotal">$0.00</div>
                     </div>
 
+                    <!-- Price Comparison Tool (Reference Only - Not Exported) -->
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border: 2px solid #ffc107;">
+                        <h3 style="font-size: 1em; margin-bottom: 10px; color: #333;">📊 Price Comparison (Reference Only)</h3>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Compare current estimate at different price points (for internal use only)</p>
+                        
+                        <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                            <input type="checkbox" id="showPriceComparison" onchange="togglePriceComparison()" style="margin-right: 8px; width: 18px; height: 18px;">
+                            <span style="font-weight: 600;">Show Price Comparison</span>
+                        </label>
+                        
+                        <div id="priceComparisonContainer" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                                <div style="background: white; padding: 10px; border-radius: 5px; border: 2px solid #ddd; text-align: center;">
+                                    <div style="font-weight: 600; margin-bottom: 5px;">Low ($6/ft)</div>
+                                    <div id="priceCompLow" style="font-size: 1.2em; color: #28a745;">$0.00</div>
+                                </div>
+                                <div style="background: white; padding: 10px; border-radius: 5px; border: 2px solid #ddd; text-align: center;">
+                                    <div style="font-weight: 600; margin-bottom: 5px;">Mid ($8/ft)</div>
+                                    <div id="priceCompMid" style="font-size: 1.2em; color: #0066ff;">$0.00</div>
+                                </div>
+                                <div style="background: white; padding: 10px; border-radius: 5px; border: 2px solid #ddd; text-align: center;">
+                                    <div style="font-weight: 600; margin-bottom: 5px;">High ($10/ft)</div>
+                                    <div id="priceCompHigh" style="font-size: 1.2em; color: #dc3545;">$0.00</div>
+                                </div>
+                            </div>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 10px; font-style: italic;">
+                                ⚠️ Not exported - for reference only
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Export Options -->
                     <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                         <h4 style="margin-bottom: 10px; color: #333;">📄 Export Options</h4>
@@ -800,9 +864,9 @@
                             <label style="display: block; margin-bottom: 5px; font-weight: 600;">Logo (optional):</label>
                             <div style="display: flex; gap: 10px; align-items: flex-start;">
                                 <input type="file" id="logoUpload" accept="image/*" 
-                                       style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 5px;" 
+                                       style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" 
                                        onchange="saveLogo()">
-                                <button class="btn-secondary" onclick="clearLogo()" style="padding: 8px 15px; white-space: nowrap;">Clear Logo</button>
+                                <button class="btn-secondary" onclick="clearLogo()" style="padding: 8px 12px; white-space: nowrap; font-size: 14px;">Clear</button>
                             </div>
                             <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Logo saved until cleared - appears at bottom of PDF</p>
                             <div id="logoPreview" style="margin-top: 10px; display: none;">
@@ -844,9 +908,17 @@
                         </p>
                     </div>
 
-                    <button class="btn-primary" onclick="exportPDF()" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.1em;">
-                        📄 Export to PDF
+                    <button class="btn-primary" onclick="exportSinglePDF()" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.1em;">
+                        📄 Export Basic Only
                     </button>
+                    
+                    <button class="btn-primary" onclick="exportAllTiersPDF()" style="width: 100%; margin-top: 10px; padding: 15px; font-size: 1.1em; background: #17a2b8;">
+                        📑 Export All Tiers (Multi-Page PDF)
+                    </button>
+                    
+                    <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 8px;">
+                        Each tier exports with its own measurements and pricing
+                    </p>
                 </div>
             </div>
         </div>
@@ -875,6 +947,41 @@
         let currentSectionIndex = 0;
         let manualMeasurements = [];
         let wreaths = [];
+        
+        // Tier system - each tier has its own measurements
+        let currentTier = 1;
+        let tiers = {
+            1: {
+                name: 'Basic Package - Front Only',
+                sections: [],
+                manualMeasurements: [],
+                wreaths: [],
+                columnCount: 0,
+                columnPrice: 40,
+                shrubCount: 0,
+                shrubPrice: 30
+            },
+            2: {
+                name: 'Standard Package - Front + Sides',
+                sections: [],
+                manualMeasurements: [],
+                wreaths: [],
+                columnCount: 0,
+                columnPrice: 40,
+                shrubCount: 0,
+                shrubPrice: 30
+            },
+            3: {
+                name: 'Premium Package - Full House',
+                sections: [],
+                manualMeasurements: [],
+                wreaths: [],
+                columnCount: 0,
+                columnPrice: 40,
+                shrubCount: 0,
+                shrubPrice: 30
+            }
+        };
 
         // Color palette for sections - will cycle through these
         const sectionColors = [
@@ -921,6 +1028,10 @@
                     setupCanvas();
                     document.getElementById('canvasSection').style.display = 'block';
                     document.getElementById('instructionsCollapsible').style.display = 'block';
+                    
+                    // Auto-collapse Step 1 to save space
+                    document.getElementById('uploadContent').style.display = 'none';
+                    document.getElementById('uploadToggle').textContent = '▶';
                 };
                 image.src = originalImageData;
             };
@@ -936,6 +1047,18 @@
             } else {
                 content.style.display = 'none';
                 toggle.textContent = '▼';
+            }
+        }
+
+        function toggleUploadSection() {
+            const content = document.getElementById('uploadContent');
+            const toggle = document.getElementById('uploadToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
             }
         }
 
@@ -976,6 +1099,104 @@
             document.getElementById('logoUpload').value = '';
             document.getElementById('logoPreview').style.display = 'none';
             alert('Logo cleared!');
+        }
+
+        // Pricing Options Functions
+        function togglePriceComparison() {
+            const enabled = document.getElementById('showPriceComparison').checked;
+            const container = document.getElementById('priceComparisonContainer');
+            
+            if (enabled) {
+                container.style.display = 'block';
+                updatePriceComparison();
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function updatePriceComparison() {
+            const rooflineFootage = sections.reduce((sum, s) => 
+                sum + s.lengths.reduce((s2, l) => s2 + l, 0), 0) + 
+                manualMeasurements.reduce((sum, m) => sum + m.length, 0);
+            
+            const wreathTotal = wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0);
+            const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
+            const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
+            const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
+            const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
+            const otherCosts = wreathTotal + (columnCount * columnPrice) + (shrubCount * shrubPrice);
+            
+            document.getElementById('priceCompLow').textContent = '$' + ((rooflineFootage * 6) + otherCosts).toFixed(2);
+            document.getElementById('priceCompMid').textContent = '$' + ((rooflineFootage * 8) + otherCosts).toFixed(2);
+            document.getElementById('priceCompHigh').textContent = '$' + ((rooflineFootage * 10) + otherCosts).toFixed(2);
+        }
+
+        // Tier Management Functions
+        function switchToTier(tierNum) {
+            // Save current tier data
+            tiers[currentTier].sections = JSON.parse(JSON.stringify(sections));
+            tiers[currentTier].manualMeasurements = JSON.parse(JSON.stringify(manualMeasurements));
+            tiers[currentTier].wreaths = JSON.parse(JSON.stringify(wreaths));
+            tiers[currentTier].columnCount = parseInt(document.getElementById('columnCount').value) || 0;
+            tiers[currentTier].columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
+            tiers[currentTier].shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
+            tiers[currentTier].shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
+            
+            // Load new tier data
+            currentTier = tierNum;
+            sections = JSON.parse(JSON.stringify(tiers[tierNum].sections));
+            manualMeasurements = JSON.parse(JSON.stringify(tiers[tierNum].manualMeasurements));
+            wreaths = JSON.parse(JSON.stringify(tiers[tierNum].wreaths));
+            
+            // Update UI
+            document.getElementById('columnCount').value = tiers[tierNum].columnCount;
+            document.getElementById('columnPrice').value = tiers[tierNum].columnPrice;
+            document.getElementById('shrubCount').value = tiers[tierNum].shrubCount;
+            document.getElementById('shrubPrice').value = tiers[tierNum].shrubPrice;
+            document.getElementById('currentTierName').value = tiers[tierNum].name;
+            
+            // Update button styles
+            const tierLabels = ['Basic', 'Standard', 'Premium'];
+            for (let i = 1; i <= 3; i++) {
+                const btn = document.getElementById(`tierBtn${i}`);
+                if (i === tierNum) {
+                    btn.className = 'btn-primary';
+                    btn.style.background = '#28a745';
+                    btn.style.border = '3px solid #28a745';
+                    btn.textContent = `${tierLabels[i-1]} (Active)`;
+                } else {
+                    btn.className = 'btn-secondary';
+                    btn.style.background = '';
+                    btn.style.border = '';
+                    btn.textContent = tierLabels[i-1];
+                }
+            }
+            
+            // Initialize sections if empty
+            if (sections.length === 0) {
+                initializeFirstSection();
+                currentSectionIndex = 0; // Set to first section
+            } else {
+                // Set to last section or 0 if exists
+                currentSectionIndex = sections.length - 1;
+            }
+            
+            // Redraw and update
+            drawCanvas();
+            updateMeasurementsList();
+            updateEstimate();
+            renderWreaths();
+            renderManualMeasurements();
+            updateLegend(); // Update legend to show correct sections
+            
+            // Auto-update price comparison if visible
+            if (document.getElementById('showPriceComparison').checked) {
+                updatePriceComparison();
+            }
+        }
+
+        function updateTierName() {
+            tiers[currentTier].name = document.getElementById('currentTierName').value;
         }
 
         // Load saved logo on page load
@@ -1883,7 +2104,15 @@
             document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
         }
 
-        function exportPDF() {
+        function exportSinglePDF() {
+            exportTiersPDF(false);
+        }
+
+        function exportAllTiersPDF() {
+            exportTiersPDF(true);
+        }
+
+        function exportTiersPDF(exportAll) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
@@ -1896,8 +2125,7 @@
             const showWreathPrices = document.getElementById('exportShowWreathPrices').checked;
             const showWrapPrices = document.getElementById('exportShowWrapPrices').checked;
             
-            let yPos = 20;
-            let logoData = savedLogoData; // Use persistent saved logo
+            let logoData = savedLogoData;
             
             // If no saved logo, check if one was just uploaded
             const logoFile = document.getElementById('logoUpload').files[0];
@@ -1905,43 +2133,66 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     logoData = e.target.result;
-                    generatePDFContent();
+                    generatePDF();
                 };
                 reader.readAsDataURL(logoFile);
             } else {
-                generatePDFContent();
+                generatePDF();
             }
             
-            function generatePDFContent() {
+            function generatePDF() {
+                const tiersToExport = exportAll ? [1, 2, 3] : [1];
+                
+                tiersToExport.forEach((tierNum, index) => {
+                    if (index > 0) {
+                        doc.addPage();
+                    }
+                    generateTierPage(doc, tierNum);
+                });
+                
+                // Save
+                const filename = exportAll 
+                    ? `${customerName.replace(/\s+/g, '_')}_ChristmasLights_AllTiers.pdf`
+                    : `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Basic.pdf`;
+                doc.save(filename);
+            }
+            
+            function generateTierPage(doc, tierNum) {
+                const tierData = tiers[tierNum];
+                const customerName = document.getElementById('customerName').value || 'Customer';
+                const customerAddress = document.getElementById('customerAddress').value || '';
+                const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
+                
+                let yPos = 20;
+                
                 // Title
                 doc.setFontSize(22);
                 doc.setTextColor(44, 95, 45);
                 doc.text('Christmas Light Installation Quote', 105, 20, { align: 'center' });
                 
+                // Tier name subtitle
+                doc.setFontSize(16);
+                doc.setTextColor(0, 102, 255);
+                doc.text(tierData.name, 105, 30, { align: 'center' });
+                yPos = 35;
+                
                 // Customer info
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
-                doc.text(`Customer: ${customerName}`, 20, 40);
-                doc.text(`Address: ${customerAddress}`, 20, 48);
-                doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
+                doc.text(`Customer: ${customerName}`, 20, yPos + 15);
+                doc.text(`Address: ${customerAddress}`, 20, yPos + 23);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos + 31);
                 
                 // Line
                 doc.setDrawColor(44, 95, 45);
                 doc.setLineWidth(0.5);
-                doc.line(20, 62, 190, 62);
+                doc.line(20, yPos + 37, 190, yPos + 37);
                 
-                yPos = 75;
+                yPos = yPos + 50;
                 
-                // Add photo - with or without measurement labels (NO calibration line in either mode)
+                // Add photo with tier's measurements (NO calibration line)
                 if (canvas && image) {
-                    doc.setFontSize(14);
-                    doc.setTextColor(44, 95, 45);
-                    doc.text('Roof Photo:', 20, yPos);
-                    yPos += 8;
-                    
-                    let photoImage;
-                    
-                    // Always create temp canvas to exclude calibration line
+                    // Create temp canvas with this tier's sections
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = canvas.width;
                     tempCanvas.height = canvas.height;
@@ -1950,31 +2201,32 @@
                     // Draw base image
                     tempCtx.drawImage(image, 0, 0);
                     
-                    // Skip calibration line entirely
+                    const showMeasurements = document.getElementById('exportShowMeasurements').checked;
+                    const isMobile = forceMobileMode || window.innerWidth < 768;
                     
-                    if (showMeasurements) {
-                        // Draw sections with measurement labels
-                        sections.forEach((section) => {
-                            if (section.points.length === 0) return;
-                            
-                            const isMobile = forceMobileMode || window.innerWidth < 768;
-                            const measurePointSize = isMobile ? 50 : 8;
-                            const pointNumberFontSize = isMobile ? 32 : 12;
-                            const lineWidth = isMobile ? 12 : 3;
-                            
-                            tempCtx.strokeStyle = section.color;
-                            tempCtx.lineWidth = lineWidth;
-                            
-                            // Draw lines
-                            for (let i = 0; i < section.points.length - 1; i++) {
-                                if (section.points[i] && section.points[i + 1]) {
-                                    tempCtx.beginPath();
-                                    tempCtx.moveTo(section.points[i].x, section.points[i].y);
-                                    tempCtx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
-                                    tempCtx.stroke();
-                                }
+                    // Draw this tier's sections
+                    tierData.sections.forEach((section) => {
+                        if (section.points.length === 0) return;
+                        
+                        const measurePointSize = isMobile ? 50 : 8;
+                        const pointNumberFontSize = isMobile ? 32 : 12;
+                        const lineWidth = isMobile ? 12 : 3;
+                        
+                        tempCtx.strokeStyle = section.color;
+                        tempCtx.lineWidth = lineWidth;
+                        
+                        // Draw lines
+                        for (let i = 0; i < section.points.length - 1; i++) {
+                            if (section.points[i] && section.points[i + 1]) {
+                                tempCtx.beginPath();
+                                tempCtx.moveTo(section.points[i].x, section.points[i].y);
+                                tempCtx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
+                                tempCtx.stroke();
                             }
-                            
+                        }
+                        
+                        // Only draw points and numbers if measurements are shown
+                        if (showMeasurements) {
                             // Draw points with numbers
                             section.points.forEach((point, idx) => {
                                 if (point) {
@@ -1994,17 +2246,13 @@
                                     tempCtx.fillText((idx + 1).toString(), point.x, point.y);
                                 }
                             });
-                        });
+                        }
                         
-                        // Draw measurement labels (from original canvas logic)
-                        sections.forEach((section) => {
-                            if (section.points.length === 0) return;
-                            
-                            const isMobile = forceMobileMode || window.innerWidth < 768;
+                        // Draw measurement labels if enabled
+                        if (showMeasurements) {
                             const labelFontSize = isMobile ? 14 : 11;
-                            const xButtonSize = isMobile ? 24 : 16;
                             const boxHeight = isMobile ? 24 : 16;
-
+                            
                             for (let i = 0; i < section.points.length - 1; i++) {
                                 if (section.lengths[i] && section.points[i] && section.points[i + 1]) {
                                     const midX = (section.points[i].x + section.points[i + 1].x) / 2;
@@ -2028,60 +2276,14 @@
                                     tempCtx.fillText(labelText, midX, midY);
                                 }
                             }
-                        });
-                        
-                        photoImage = tempCanvas.toDataURL('image/jpeg', 0.7);
-                    } else {
-                        // Just points and lines, NO LABELS (tempCanvas already created above)
-                        
-                        // Draw all sections with points and lines, but NO LABELS
-                        sections.forEach((section) => {
-                            if (section.points.length === 0) return;
-                            
-                            const isMobile = forceMobileMode || window.innerWidth < 768;
-                            const measurePointSize = isMobile ? 50 : 8;
-                            const pointNumberFontSize = isMobile ? 32 : 12;
-                            const lineWidth = isMobile ? 12 : 3;
-                            
-                            tempCtx.strokeStyle = section.color;
-                            tempCtx.lineWidth = lineWidth;
-                            
-                            // Draw lines
-                            for (let i = 0; i < section.points.length - 1; i++) {
-                                if (section.points[i] && section.points[i + 1]) {
-                                    tempCtx.beginPath();
-                                    tempCtx.moveTo(section.points[i].x, section.points[i].y);
-                                    tempCtx.lineTo(section.points[i + 1].x, section.points[i + 1].y);
-                                    tempCtx.stroke();
-                                }
-                            }
-                            
-                            // Draw points with numbers
-                            section.points.forEach((point, idx) => {
-                                if (point) {
-                                    tempCtx.fillStyle = section.color;
-                                    tempCtx.beginPath();
-                                    tempCtx.arc(point.x, point.y, measurePointSize, 0, Math.PI * 2);
-                                    tempCtx.fill();
-                                    
-                                    tempCtx.strokeStyle = 'white';
-                                    tempCtx.lineWidth = 2;
-                                    tempCtx.stroke();
-                                    
-                                    tempCtx.fillStyle = 'white';
-                                    tempCtx.font = `bold ${pointNumberFontSize}px Arial`;
-                                    tempCtx.textAlign = 'center';
-                                    tempCtx.textBaseline = 'middle';
-                                    tempCtx.fillText((idx + 1).toString(), point.x, point.y);
-                                }
-                            });
-                        });
-                        
-                        photoImage = tempCanvas.toDataURL('image/jpeg', 0.7);
-                    }
+                        }
+                    });
                     
+                    const photoImage = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // Add to PDF - adjust size to fit on same page as pricing
                     const maxWidth = 170;
-                    const maxHeight = 100;
+                    const maxHeight = 80; // Reduced from 100 to fit pricing below
                     let imgWidth = canvas.width;
                     let imgHeight = canvas.height;
                     
@@ -2089,22 +2291,30 @@
                     imgWidth = imgWidth * ratio;
                     imgHeight = imgHeight * ratio;
                     
+                    doc.setFontSize(14);
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('Roof Photo:', 20, yPos);
+                    yPos += 8;
+                    
                     doc.addImage(photoImage, 'JPEG', 20, yPos, imgWidth, imgHeight);
                     yPos += imgHeight + 15;
-                    
-                    if (yPos > 200) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
                 }
                 
-                // Roofline
-                const rooflineFootage = sections.reduce((sum, s) => 
+                // Calculate totals from tier data
+                const rooflineFootage = tierData.sections.reduce((sum, s) => 
                     sum + s.lengths.reduce((s2, l) => s2 + l, 0), 0) + 
-                    manualMeasurements.reduce((sum, m) => sum + m.length, 0);
-                const pricePerFoot = parseFloat(document.getElementById('pricePerFoot').value) || 0;
+                    tierData.manualMeasurements.reduce((sum, m) => sum + m.length, 0);
                 const rooflineTotal = rooflineFootage * pricePerFoot;
                 
+                const wreathTotal = tierData.wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0);
+                const columnTotal = tierData.columnCount * tierData.columnPrice;
+                const shrubTotal = tierData.shrubCount * tierData.shrubPrice;
+                
+                const showPricePerFoot = document.getElementById('exportShowPricePerFoot').checked;
+                const showWreathPrices = document.getElementById('exportShowWreathPrices').checked;
+                const showWrapPrices = document.getElementById('exportShowWrapPrices').checked;
+                
+                // Roofline
                 doc.setFontSize(14);
                 doc.text('Roofline Lights:', 20, yPos);
                 
@@ -2120,14 +2330,12 @@
                 yPos += 10;
                 
                 // Wreaths
-                if (wreaths.length > 0) {
+                if (tierData.wreaths.length > 0) {
                     doc.text('Wreaths:', 20, yPos);
                     yPos += 8;
                     
-                    const wreathTotal = wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0);
-                    
                     if (showWreathPrices) {
-                        wreaths.forEach(wreath => {
+                        tierData.wreaths.forEach(wreath => {
                             doc.setFontSize(11);
                             const subtotal = wreath.quantity * wreath.price;
                             doc.text(`  ${wreath.quantity} × ${wreath.size}" @ $${wreath.price}`, 25, yPos);
@@ -2136,48 +2344,31 @@
                         });
                     } else {
                         doc.setFontSize(11);
-                        const totalWreaths = wreaths.reduce((sum, w) => sum + w.quantity, 0);
+                        const totalWreaths = tierData.wreaths.reduce((sum, w) => sum + w.quantity, 0);
                         doc.text(`  ${totalWreaths} wreaths (various sizes)`, 25, yPos);
                         doc.text(`$${wreathTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
                         yPos += 7;
                     }
+                    doc.setFontSize(14);
                     yPos += 3;
                 }
                 
                 // Columns
-                const columnCount = parseInt(document.getElementById('columnCount').value) || 0;
-                const columnPrice = parseFloat(document.getElementById('columnPrice').value) || 0;
-                const columnTotal = columnCount * columnPrice;
-                
-                if (columnCount > 0) {
-                    doc.setFontSize(14);
-                    
+                if (tierData.columnCount > 0) {
+                    doc.text('Column Wraps:', 20, yPos);
                     if (showWrapPrices) {
-                        doc.text('Column Wraps:', 20, yPos);
-                        doc.text(`${columnCount} × $${columnPrice}`, 80, yPos);
-                    } else {
-                        doc.text('Column Wraps:', 20, yPos);
+                        doc.text(`${tierData.columnCount} × $${tierData.columnPrice}`, 80, yPos);
                     }
-                    
                     doc.text(`$${columnTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
                     yPos += 10;
                 }
                 
                 // Shrubs
-                const shrubCount = parseInt(document.getElementById('shrubCount').value) || 0;
-                const shrubPrice = parseFloat(document.getElementById('shrubPrice').value) || 0;
-                const shrubTotal = shrubCount * shrubPrice;
-                
-                if (shrubCount > 0) {
-                    doc.setFontSize(14);
-                    
+                if (tierData.shrubCount > 0) {
+                    doc.text('Shrub Wraps:', 20, yPos);
                     if (showWrapPrices) {
-                        doc.text('Shrub Wraps:', 20, yPos);
-                        doc.text(`${shrubCount} × $${shrubPrice}`, 80, yPos);
-                    } else {
-                        doc.text('Shrub Wraps:', 20, yPos);
+                        doc.text(`${tierData.shrubCount} × $${tierData.shrubPrice}`, 80, yPos);
                     }
-                    
                     doc.text(`$${shrubTotal.toFixed(2)}`, 160, yPos, { align: 'right' });
                     yPos += 10;
                 }
@@ -2190,43 +2381,32 @@
                 
                 doc.setFontSize(18);
                 doc.setTextColor(44, 95, 45);
-                const grandTotal = rooflineTotal + wreaths.reduce((sum, w) => sum + (w.quantity * w.price), 0) + 
-                                  columnTotal + shrubTotal;
+                const grandTotal = rooflineTotal + wreathTotal + columnTotal + shrubTotal;
                 doc.text('TOTAL:', 20, yPos);
                 doc.text(`$${grandTotal.toFixed(2)}`, 190, yPos, { align: 'right' });
                 
                 // Add logo at bottom if available
                 if (logoData) {
                     const logoImg = new Image();
-                    logoImg.onload = function() {
-                        // Larger logo at bottom center
-                        const logoMaxWidth = 80;
-                        const logoMaxHeight = 60;
-                        let logoWidth = logoImg.width;
-                        let logoHeight = logoImg.height;
-                        const logoRatio = Math.min(logoMaxWidth / logoWidth, logoMaxHeight / logoHeight);
-                        logoWidth = logoWidth * logoRatio;
-                        logoHeight = logoHeight * logoRatio;
-                        
-                        // Center at bottom of page (moved higher to prevent cutoff)
-                        const logoX = (210 - logoWidth) / 2; // 210 is A4 width
-                        const logoY = 250; // Moved up from 270 to prevent cutoff
-                        
-                        doc.addImage(logoData, 'JPEG', logoX, logoY, logoWidth, logoHeight);
-                        
-                        // Save after logo is added
-                        const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
-                        doc.save(filename);
-                    };
                     logoImg.src = logoData;
-                } else {
-                    // No logo, save immediately
-                    const filename = `${customerName.replace(/\s+/g, '_')}_ChristmasLights_Quote.pdf`;
-                    doc.save(filename);
+                    const logoMaxWidth = 60;  // Reduced from 80
+                    const logoMaxHeight = 45; // Reduced from 60
+                    let logoWidth = logoImg.width;
+                    let logoHeight = logoImg.height;
+                    const logoRatio = Math.min(logoMaxWidth / logoWidth, logoMaxHeight / logoHeight);
+                    logoWidth = logoWidth * logoRatio;
+                    logoHeight = logoHeight * logoRatio;
+                    
+                    const logoX = (210 - logoWidth) / 2;
+                    // Position logo after total with some spacing, but ensure it fits on page
+                    const logoY = Math.min(yPos + 20, 260); // Max Y=260 to stay on page (A4 height ~297mm)
+                    
+                    doc.addImage(logoData, 'JPEG', logoX, logoY, logoWidth, logoHeight);
                 }
             }
         }
 
+        // Project Save/Load Functions
         // Project Save/Load Functions
         function saveProject() {
             const customerName = document.getElementById('customerName').value || 'Untitled';
